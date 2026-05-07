@@ -105,8 +105,7 @@ void CupDAQManager::TF_TriggerMon()
 
   auto start_time = std::chrono::steady_clock::now();
 
-  auto get_hms = [](double sec)
-  {
+  auto get_hms = [](double sec) {
     if (sec < 0) sec = 0;
 
     int h = static_cast<int>(sec) / 3600;
@@ -142,8 +141,6 @@ void CupDAQManager::TF_TriggerMon()
 
       dummynevent = static_cast<unsigned int>(triggernumber);
       dummytime = triggertime;
-
-      fCurrentTriggerRate = insrate;
     }
 
     bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
@@ -163,7 +160,7 @@ void CupDAQManager::TF_DebugMon()
     return;
   }
 
-  const int nadc_int = GetEntries();
+  const int nadc_int = static_cast<int>(fADCList.size());
   const double debugmontime = 1.0;
 
   INFO("started");
@@ -191,7 +188,7 @@ void CupDAQManager::TF_DebugMon()
           std::snprintf(buf, sizeof(buf), "%5d ", fRemainingBCount[i]);
           adcbcountsize += buf;
 
-          auto * adc = static_cast<AbsADC *>(fCont[i]);
+          auto * adc = fADCList[i].get();
           std::snprintf(buf, sizeof(buf), "%5d ", adc->Bsize());
           adcbufsize += buf;
 
@@ -231,7 +228,7 @@ void CupDAQManager::TF_ShrinkToFit()
 
   auto start_time = std::chrono::steady_clock::now();
 
-  const int nadc_int = GetEntries();
+  const int nadc_int = static_cast<int>(fADCList.size());
 
   while (true) {
     auto current_time = std::chrono::steady_clock::now();
@@ -241,7 +238,7 @@ void CupDAQManager::TF_ShrinkToFit()
       start_time = std::chrono::steady_clock::now();
 
       for (int i = 0; i < nadc_int; ++i) {
-        auto * adc = static_cast<AbsADC *>(fCont[i]);
+        auto * adc = fADCList[i].get();
         adc->Bshrink_to_fit();
 
         auto * modbuffer = fADCRawBuffers.at(static_cast<std::size_t>(i));

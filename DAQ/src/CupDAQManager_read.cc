@@ -26,7 +26,7 @@ void CupDAQManager::TF_ReadData()
 
 void CupDAQManager::ReadData_GLT()
 {
-  const int nadc_int = GetEntries();
+  const int nadc_int = static_cast<int>(fADCList.size());
   if (nadc_int <= 0) {
     ERROR("no ADC modules in ReadData_GLT");
     RUNSTATE::SetError(fRunStatus);
@@ -36,7 +36,7 @@ void CupDAQManager::ReadData_GLT()
   const std::size_t nadc = static_cast<std::size_t>(nadc_int);
   std::vector<int> bcounts(nadc);
 
-  auto * theADC = static_cast<AbsADC *>(fCont[0]);
+  auto * theADC = fADCList[0].get();
 
   double perror = 0.0;
   double integral = 0.0;

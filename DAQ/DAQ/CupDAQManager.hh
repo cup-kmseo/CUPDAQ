@@ -12,7 +12,6 @@
 
 #include "TBenchmark.h"
 #include "TFile.h"
-#include "TObjArray.h"
 #include "TTree.h"
 
 #include "DAQ/CupGeneralTCB.hh"
@@ -31,7 +30,7 @@
 #include "OnlObjs/AbsADCRaw.hh"
 #include "OnlObjs/BuiltEvent.hh"
 
-class CupDAQManager : public TObjArray {
+class CupDAQManager {
 public:
   enum PROCSTATE
   {
@@ -43,7 +42,7 @@ public:
   };
 
   CupDAQManager();
-  ~CupDAQManager() override;
+  ~CupDAQManager();
 
   virtual void SetRunNumber(int run);
   virtual void SetDAQID(int id);
@@ -56,7 +55,7 @@ public:
 
   virtual void UseEventMerger();
 
-  virtual void AddADC(AbsADC * adc);
+  virtual void AddADC(std::unique_ptr<AbsADC> adc);
   virtual bool AddADC(AbsConf * conf);
   virtual bool AddADC(AbsConfList * conflist);
 
@@ -165,7 +164,6 @@ protected:
                           std::atomic<unsigned long> & state);
   virtual bool IsForcedEndRunFile(bool useRC = false);
 
-  virtual const char * GetADCName() const;
   virtual const char * GetADCName(ADC::TYPE type) const;
 
   virtual void StartBenchmark(const char * name);
@@ -174,6 +172,9 @@ protected:
 protected:
   int fRunNumber;
   std::atomic<int> fSubRunNumber;
+
+  std::unique_ptr<CupGeneralTCB> fTCB;
+  std::vector<std::unique_ptr<AbsADC>> fADCList;
 
   int fDAQID;
   std::string fDAQName;
@@ -187,8 +188,6 @@ protected:
   std::string fConfigFilename;
   AbsConfList * fConfigList;
 
-  std::unique_ptr<CupGeneralTCB> fTCB;
-
   zmq::context_t fZMQContext{1};
   std::vector<std::unique_ptr<zmq::socket_t>> fDAQSocket;
 
@@ -198,7 +197,6 @@ protected:
   int fADCChannelDataSize;
   int fNDP;
 
-  bool fIsOwnADC;
   bool fIsDAQOpen;
 
   std::atomic<unsigned long> fRunStatus;
@@ -281,10 +279,6 @@ protected:
   std::mutex fBenchmarkMutex;
   std::mutex fRecvBufferMutex;
 
-  std::string fADCName;
-
-  double fCurrentTriggerRate;
-
   bool fDoSendEvent;
   std::map<int, std::unique_ptr<BuiltEventBuffer>> fRecvEventBuffers;
 
@@ -297,8 +291,6 @@ protected:
   std::string fMergeServerHost;
   int fMergeServerPort;
   unsigned long fTotalRawDataSize;
-
-  ClassDef(CupDAQManager, 0)
 };
 
 inline void CupDAQManager::SetRunNumber(int run) { fRunNumber = run; }
@@ -307,21 +299,7 @@ inline void CupDAQManager::SetDAQID(int id) { fDAQID = id; }
 
 inline void CupDAQManager::SetDAQType(DAQ::TYPE type) { fDAQType = type; }
 
-inline void CupDAQManager::SetADCType(ADC::TYPE type)
-{
-  fADCType = type;
-
-  switch (type) {
-    case ADC::SADCS: fADCName = "SADC"; break;
-    case ADC::SADCT: fADCName = "SADC"; break;
-    case ADC::FADCS: fADCName = "FADC"; break;
-    case ADC::FADCT: fADCName = "FADC"; break;
-    case ADC::GADCS: fADCName = "GADC"; break;
-    case ADC::GADCT: fADCName = "GADC"; break;
-    case ADC::MADCS: fADCName = "MADC"; break;
-    default: break;
-  }
-}
+inline void CupDAQManager::SetADCType(ADC::TYPE type) { fADCType = type; }
 
 inline void CupDAQManager::SetTriggerMode(TRIGGER::MODE mode) { fTriggerMode = mode; }
 
@@ -360,7 +338,7 @@ inline bool CupDAQManager::IsStandaloneDAQ() const
           fADCType == ADC::MADCS);
 }
 
-inline int CupDAQManager::GetNADC() const { return GetEntries(); }
+inline int CupDAQManager::GetNADC() const { return static_cast<int>(fADCList.size()); }
 
 inline int CupDAQManager::GetNDP() const
 {
@@ -435,8 +413,6 @@ inline int CupDAQManager::GetADCChannelDataSize() const
 
   return dataSize;
 }
-
-inline const char * CupDAQManager::GetADCName() const { return fADCName.c_str(); }
 
 inline const char * CupDAQManager::GetADCName(ADC::TYPE type) const
 {

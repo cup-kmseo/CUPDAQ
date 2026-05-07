@@ -4,6 +4,8 @@
 #include <filesystem>
 #include <thread>
 
+#include "TDatime.h"
+
 #include "DAQ/CupDAQManager.hh"
 #include "DAQUtils/ELog.hh"
 
@@ -37,9 +39,9 @@ void CupDAQManager::PrintDAQSummary()
   unsigned long totalReadDataSize;
   double liveTime;
 
-  const std::size_t nadc = GetEntries();
+  const std::size_t nadc = static_cast<int>(fADCList.size());
   if (nadc > 0) {
-    auto * theADC = static_cast<AbsADC *>(fCont[0]);
+    auto * theADC = fADCList[0].get();
     totalReadDataSize = static_cast<unsigned long>(nadc * theADC->GetTotalBCount() * kKILOBYTES);
     liveTime = theADC->GetCurrentTime() / kDONESECOND;
   }

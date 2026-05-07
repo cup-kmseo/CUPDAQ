@@ -25,9 +25,9 @@ void CupDAQManager::TF_SortEvent()
   fSortStatus.store(ENDED);
 
   // read already ended, clear remaining data in ADCs
-  const int nadc_int = GetEntries();
+  const int nadc_int = static_cast<int>(fADCList.size());
   for (int i = 0; i < nadc_int; ++i) {
-    auto * adc = static_cast<AbsADC *>(fCont[i]);
+    auto * adc = fADCList[i].get();
     adc->Bclear();
   }
 
@@ -36,7 +36,7 @@ void CupDAQManager::TF_SortEvent()
 
 void CupDAQManager::SortEvent_MOD()
 {
-  const int nadc_int = GetEntries();
+  const int nadc_int = static_cast<int>(fADCList.size());
   if (nadc_int <= 0) {
     WARNING("no ADC modules in SortEvent_MOD");
     return;
@@ -53,7 +53,7 @@ void CupDAQManager::SortEvent_MOD()
     if (fReadStatus.load() == ENDED) {
       int remain = 0;
       for (int i = 0; i < nadc_int; ++i) {
-        auto * adc = static_cast<AbsADC *>(fCont[i]);
+        auto * adc = fADCList[i].get();
         remain += adc->Bsize();
       }
       if (remain == 0) {
@@ -66,7 +66,7 @@ void CupDAQManager::SortEvent_MOD()
 
     int totalsize = 0;
     for (int i = 0; i < nadc_int; ++i) {
-      auto * adc = static_cast<AbsADC *>(fCont[i]);
+      auto * adc = fADCList[i].get();
       totalsize += adc->Bsize();
       if (adc->Bempty()) { continue; }
 

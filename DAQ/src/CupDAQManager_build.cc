@@ -42,7 +42,7 @@ void CupDAQManager::TF_BuildEvent()
 
 void CupDAQManager::BuildEvent_GLT()
 {
-  std::size_t nadc = static_cast<std::size_t>(GetEntries());
+  std::size_t nadc = static_cast<std::size_t>(static_cast<int>(fADCList.size()));
 
   std::vector<ADCHeader *> header(nadc);
   std::vector<int> sanity(nadc);
@@ -128,7 +128,7 @@ void CupDAQManager::BuildEvent_GLT()
 
       int nerror = 0;
       for (std::size_t i = 0; i < nadc; i++) {
-        auto * adc = static_cast<AbsADC *>(fCont[i]);
+        auto * adc = fADCList[i].get();
         auto * adceventbuffer = buffers[i];
         if (adceventbuffer == nullptr) { continue; }
 
@@ -322,7 +322,7 @@ void CupDAQManager::BuildEvent_SLF() {}
 void CupDAQManager::CheckEventSanity(ADCHeader ** header, unsigned int * tn, unsigned long * tt,
                                      int * error)
 {
-  std::size_t nadc = static_cast<std::size_t>(GetEntries());
+  std::size_t nadc = static_cast<std::size_t>(static_cast<int>(fADCList.size()));
   std::memset(error, 0, nadc * sizeof(int));
 
   if (nadc == 1) {
