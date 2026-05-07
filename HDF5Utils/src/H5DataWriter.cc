@@ -1,12 +1,13 @@
+#include "HDF5Utils/H5Log.hh"
 #include <filesystem>
+
+#include <hdf5.h>
 
 #include "HDF5Utils/H5DataWriter.hh"
 
-ClassImp(H5DataWriter)
 
 H5DataWriter::H5DataWriter()
-  : TObject(),
-    fFilename(),
+  : fFilename(),
     fFileId(H5I_INVALID_HID),
     fCompressionLevel(1),
     fData(nullptr),
@@ -17,8 +18,7 @@ H5DataWriter::H5DataWriter()
 }
 
 H5DataWriter::H5DataWriter(const char * fname, int compress)
-  : TObject(),
-    fFilename(fname ? fname : ""),
+  : fFilename(fname ? fname : ""),
     fFileId(H5I_INVALID_HID),
     fCompressionLevel(compress),
     fData(nullptr),
@@ -33,12 +33,12 @@ H5DataWriter::~H5DataWriter() { Close(); }
 bool H5DataWriter::Open()
 {
   if (!fData) {
-    Error("Open", "no H5 Data (Event or Hit) connected");
+    H5ERROR("no H5 Data (Event or Hit) connected");
     return false;
   }
 
   if (fFilename.empty()) {
-    Error("Open", "filename is empty");
+    H5ERROR("filename is empty");
     return false;
   }
 
@@ -46,7 +46,7 @@ bool H5DataWriter::Open()
 
   fFileId = H5Fcreate(fFilename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   if (fFileId < 0) {
-    Error("Open", "fail to create data file %s", fFilename.c_str());
+    H5ERROR("fail to create data file %s", fFilename.c_str());
     return false;
   }
 
@@ -106,6 +106,6 @@ void H5DataWriter::PrintStats() const
   // Changed to use GetSubRunEntries so it reflects "Hits" or "Events" dynamically
   const int nentries = fData ? static_cast<int>(fData->GetSubRunEntries()) : 0;
 
-  Info("PrintStats", "%d entries written in %s (%.2f | %.2f [MB], %.2f%%)", nentries, base.c_str(),
+  H5INFO("%d entries written in %s (%.2f | %.2f [MB], %.2f%%)", nentries, base.c_str(),
        memsize, filesize, ratio);
 }

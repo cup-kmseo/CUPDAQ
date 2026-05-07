@@ -1,9 +1,11 @@
+#include "HDF5Utils/H5Log.hh"
 #include <algorithm>
 #include <cstring>
 
+#include <hdf5.h>
+
 #include "HDF5Utils/H5FADCHit.hh"
 
-ClassImp(H5FADCHit)
 
 H5FADCHit::H5FADCHit()
   : AbsH5Hit()
@@ -22,13 +24,13 @@ void H5FADCHit::Open()
   if (!fWriteTag) { return; }
 
   if (fFile < 0) {
-    Error("Open", "invalid file id (fFile = %d). SetFileId must be called before Open().",
+    H5ERROR("invalid file id (fFile = %d). SetFileId must be called before Open().",
           static_cast<int>(fFile));
     return;
   }
 
   if (fNDP <= 0 || fNDP > kH5FADCNDPMAX) {
-    Error("Open", "Invalid NDP: %d (max %d)", fNDP, kH5FADCNDPMAX);
+    H5ERROR("Invalid NDP: %d (max %d)", fNDP, kH5FADCNDPMAX);
     return;
   }
 
@@ -36,13 +38,13 @@ void H5FADCHit::Open()
   {
     htri_t gexists = H5Lexists(fFile, "/hits", H5P_DEFAULT);
     if (gexists < 0) {
-      Error("Open", "H5Lexists(/hits) failed");
+      H5ERROR("H5Lexists(/hits) failed");
       return;
     }
     if (gexists == 0) {
       hid_t grp_hits = H5Gcreate2(fFile, "/hits", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
       if (grp_hits < 0) {
-        Error("Open", "Failed to create group /hits");
+        H5ERROR("Failed to create group /hits");
         return;
       }
       H5Gclose(grp_hits);
@@ -66,7 +68,7 @@ void H5FADCHit::Open()
     H5Sclose(space);
 
     if (fDsetChs < 0) {
-      Error("Open", "Failed to create dataset /hits/chs");
+      H5ERROR("Failed to create dataset /hits/chs");
       return;
     }
   }
@@ -89,7 +91,7 @@ void H5FADCHit::Open()
     H5Sclose(space);
 
     if (fDsetWave < 0) {
-      Error("Open", "Failed to create dataset /hits/wave");
+      H5ERROR("Failed to create dataset /hits/wave");
       return;
     }
   }
@@ -149,7 +151,7 @@ herr_t H5FADCHit::FlushBuffer()
 
   // Consistency check
   if (nHitBuf * static_cast<std::size_t>(fNDP) != fWaveBuf.size()) {
-    Error("FlushBuffer", "Internal hit buffer size mismatch");
+    H5ERROR("Internal hit buffer size mismatch");
     return -1;
   }
 

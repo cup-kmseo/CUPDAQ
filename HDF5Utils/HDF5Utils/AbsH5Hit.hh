@@ -5,9 +5,6 @@
 #include <cstdint>
 
 #include "HDF5Utils/AbsH5Base.hh"
-#include "HDF5Utils/EDM.hh"
-
-#include "hdf5.h"
 
 class AbsH5Hit : public AbsH5Base {
 public:
@@ -29,7 +26,6 @@ protected:
   // Total number of hits processed
   std::uint64_t fTotalHits{0};
 
-  ClassDef(AbsH5Hit, 0)
 };
 
 inline std::uint64_t AbsH5Hit::GetTotalHits() const { return fTotalHits; }

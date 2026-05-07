@@ -1,14 +1,10 @@
 #pragma once
 
-#include <algorithm>
-#include <cstddef>
 #include <cstdint>
 #include <vector>
 
 #include "HDF5Utils/AbsH5Event.hh"
 #include "HDF5Utils/EDM.hh"
-
-#include "hdf5.h"
 
 class H5FADCEvent : public AbsH5Event {
 public:
@@ -64,7 +60,6 @@ private:
   int fReadBufSize{0};
   std::uint64_t fPrefetchChStart{0};
 
-  ClassDef(H5FADCEvent, 0)
 };
 
 inline void H5FADCEvent::SetNDP(int ndp) { fNDP = ndp; }

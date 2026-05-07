@@ -2,19 +2,14 @@
 
 #include <string>
 
-#include "TObject.h"
-
 // AbsH5Base covers both AbsH5Event and AbsH5Hit
 #include "HDF5Utils/AbsH5Base.hh"
-#include "HDF5Utils/EDM.hh"
 
-#include "hdf5.h"
-
-class H5DataWriter : public TObject {
+class H5DataWriter {
 public:
   H5DataWriter();
   H5DataWriter(const char * fname, int compress = 1);
-  ~H5DataWriter() override;
+  ~H5DataWriter();
 
   bool Open();
   void Close();
@@ -48,8 +43,6 @@ private:
   hsize_t fFileSize;
   hsize_t fMemorySize;
   int fSubrun;
-
-  ClassDef(H5DataWriter, 0)
 };
 
 inline void H5DataWriter::SetFilename(const char * fname) { fFilename = fname ? fname : ""; }

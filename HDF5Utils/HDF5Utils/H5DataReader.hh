@@ -2,18 +2,14 @@
 
 #include <vector>
 
-#include "TObject.h"
-
 #include "HDF5Utils/EDM.hh"
-
-#include "hdf5.h"
 
 class AbsH5Base; // Forward declaration changed to AbsH5Base
 
-class H5ChainFile : public TObject {
+class H5ChainFile {
 public:
   H5ChainFile();
-  ~H5ChainFile() override;
+  ~H5ChainFile();
 
   void AddFile(DataFile_t * file);
   void Close();
@@ -27,14 +23,13 @@ private:
   DataFile_t * fCurrentFilePtr{nullptr};
   std::vector<DataFile_t *> fFiles;
 
-  ClassDef(H5ChainFile, 0)
 };
 
-class H5DataReader : public TObject {
+class H5DataReader {
 public:
   H5DataReader();
   explicit H5DataReader(const char * fname);
-  ~H5DataReader() override;
+  ~H5DataReader();
 
   void SetFilename(const char * fname);
   bool Add(const char * fname);
@@ -54,7 +49,6 @@ private:
   int fEntries; // Generalized from fNEvent
   hid_t fSubType;
 
-  ClassDef(H5DataReader, 0)
 };
 
 inline void H5DataReader::SetData(AbsH5Base * data) { fData = data; }

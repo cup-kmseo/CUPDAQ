@@ -1,14 +1,10 @@
 #pragma once
 
-#include <algorithm>
-#include <cstddef>
 #include <cstdint>
 #include <vector>
 
 #include "HDF5Utils/AbsH5Event.hh"
 #include "HDF5Utils/EDM.hh"
-
-#include "hdf5.h"
 
 class H5SADCEvent : public AbsH5Event {
 public:
@@ -56,7 +52,6 @@ private:
   int fReadBufSize{0};
   std::uint64_t fPrefetchChStart{0};
 
-  ClassDef(H5SADCEvent, 0)
 };
 
 inline AChannel_t * H5SADCEvent::GetData() { return fDataBuf.data(); }

@@ -1,9 +1,12 @@
+#include "HDF5Utils/H5Log.hh"
 #include <algorithm>
 #include <cstring> // for std::strcmp
 #include <filesystem>
 #include <regex>
 #include <string>
 #include <vector>
+
+#include <hdf5.h>
 
 #include "HDF5Utils/AbsH5Base.hh"
 #include "HDF5Utils/H5DataReader.hh"
@@ -12,7 +15,6 @@
 // H5ChainFile
 //------------------------------------------------------------------------------
 
-ClassImp(H5ChainFile)
 
 H5ChainFile::H5ChainFile()
   : fFiles()
@@ -78,7 +80,6 @@ hid_t H5ChainFile::GetFileId(int entno, int & local_entry, bool * file_changed)
 // H5DataReader
 //------------------------------------------------------------------------------
 
-ClassImp(H5DataReader)
 
 H5DataReader::H5DataReader()
   : fFiles(new H5ChainFile()),
@@ -150,7 +151,7 @@ bool H5DataReader::Add(const char * fname)
     }
   }
   else {
-    Error("Add", "Directory does not exist: %s", directory.string().c_str());
+    H5ERROR("Directory does not exist: %s", directory.string().c_str());
     return false;
   }
 
@@ -168,13 +169,13 @@ bool H5DataReader::AddFile(const char * fname)
 {
   // Open HDF5 file and register its subrun/event/hit mapping
   if (!fname || fname[0] == '\0') {
-    Error("AddFile", "no file name; no files connected");
+    H5ERROR("no file name; no files connected");
     return false;
   }
 
   hid_t fid = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
   if (fid < 0) {
-    Error("AddFile", "fail to open data file %s", fname);
+    H5ERROR("fail to open data file %s", fname);
     return false;
   }
 
@@ -188,7 +189,7 @@ bool H5DataReader::AddFile(const char * fname)
   SubRun_t subrun{};
   hid_t did = H5Dopen2(fid, "subrun", H5P_DEFAULT);
   if (did < 0) {
-    Error("AddFile", "fail to open dataset[subrun]");
+    H5ERROR("fail to open dataset[subrun]");
     H5Fclose(fid);
     delete file;
     return false;
@@ -198,7 +199,7 @@ bool H5DataReader::AddFile(const char * fname)
   H5Dclose(did);
 
   if (err < 0) {
-    Error("AddFile", "fail to read dataset[subrun]");
+    H5ERROR("fail to read dataset[subrun]");
     H5Fclose(fid);
     delete file;
     return false;
@@ -224,12 +225,12 @@ bool H5DataReader::AddFile(const char * fname)
 bool H5DataReader::Open()
 {
   if (fFiles->GetNFile() == 0) {
-    Error("Open", "no file connected");
+    H5ERROR("no file connected");
     return false;
   }
 
   if (!fData) {
-    Error("Open", "no H5 data object connected");
+    H5ERROR("no H5 data object connected");
     return false;
   }
 

@@ -3,17 +3,13 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "TObject.h"
-
 #include "HDF5Utils/EDM.hh"
 #include "HDF5Utils/H5DataReader.hh"
 
-#include "hdf5.h"
-
-class AbsH5Base : public TObject {
+class AbsH5Base {
 public:
   AbsH5Base() = default;
-  ~AbsH5Base() override = default;
+  virtual ~AbsH5Base() = default;
 
   virtual void Open() = 0;
   virtual void Close() = 0;
@@ -59,7 +55,6 @@ protected:
   int fBufCount{0};
   std::size_t fBufBytesUsed{0};
 
-  ClassDef(AbsH5Base, 0)
 };
 
 inline void AbsH5Base::SetFileId(hid_t fileid) { fFile = fileid; }

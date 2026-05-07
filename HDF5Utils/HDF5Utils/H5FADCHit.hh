@@ -6,8 +6,6 @@
 #include "HDF5Utils/AbsH5Hit.hh"
 #include "HDF5Utils/EDM.hh"
 
-#include "hdf5.h"
-
 class H5FADCHit : public AbsH5Hit {
 public:
   H5FADCHit();
@@ -56,7 +54,6 @@ private:
   std::uint64_t fReadBufStart{0};
   std::uint64_t fReadBufSize{0};
 
-  ClassDef(H5FADCHit, 0)
 };
 
 // === inline definitions ===

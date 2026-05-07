@@ -6,14 +6,11 @@
 #include <vector>
 
 #include "HDF5Utils/AbsH5Base.hh"
-#include "HDF5Utils/EDM.hh"
-
-#include "hdf5.h"
 
 class AbsH5Event : public AbsH5Base {
 public:
   AbsH5Event() = default;
-  ~AbsH5Event() override = default;
+  ~AbsH5Event() override = default;  // override AbsH5Base virtual dtor
 
   // Retrieve the current event metadata
   EventInfo_t GetEventInfo() const;
@@ -37,7 +34,6 @@ protected:
   // Internal buffer for event metadata
   std::vector<EventInfo_t> fEvtBuf;
 
-  ClassDef(AbsH5Event, 0)
 };
 
 inline EventInfo_t AbsH5Event::GetEventInfo() const { return fEvtInfo; }
