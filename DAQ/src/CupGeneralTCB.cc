@@ -3,16 +3,15 @@
 #include <thread>
 
 #include "DAQ/CupGeneralTCB.hh"
+#include "DAQSystem/CupMiniTCB.hh"
+#include "DAQSystem/CupTCB.hh"
 #include "DAQUtils/ELog.hh"
 #include "OnlConsts/onlconsts.hh"
 
 using namespace std;
 
-ClassImp(CupGeneralTCB)
-
 CupGeneralTCB::CupGeneralTCB()
-  : TObject(),
-    fTCB(nullptr),
+  : fTCB(nullptr),
     fTCBConfig(nullptr),
     fConfigs(nullptr),
     fTCBType(TCB::V1),
@@ -130,6 +129,11 @@ bool CupGeneralTCB::Config()
   if (retval) { INFO("all modules configuration done"); }
 
   return retval;
+}
+
+void CupGeneralTCB::SetIPAddress(const char * ipaddr)
+{
+  if (fTCBType == TCB::MINI) { static_cast<CupMiniTCB *>(fTCB)->SetIPAddress(ipaddr); }
 }
 
 bool CupGeneralTCB::StartTrigger()

@@ -1,21 +1,17 @@
 #pragma once
 
-#include "TObject.h"
-
 #include "DAQConfig/AbsConfList.hh"
 #include "DAQConfig/FADCTConf.hh"
 #include "DAQConfig/IADCTConf.hh"
 #include "DAQConfig/SADCTConf.hh"
 #include "DAQConfig/TCBConf.hh"
 #include "DAQSystem/AbsTCB.hh"
-#include "DAQSystem/CupMiniTCB.hh"
-#include "DAQSystem/CupTCB.hh"
 #include "OnlConsts/onlconsts.hh"
 
-class CupGeneralTCB : public TObject {
+class CupGeneralTCB {
 public:
   CupGeneralTCB();
-  ~CupGeneralTCB() override = default;
+  ~CupGeneralTCB() = default;
 
   int Open();
   void Close();
@@ -43,15 +39,8 @@ private:
   TCB::TYPE fTCBType;
   ADC::TYPE fADCType;
   DAQ::EXPERIMENT fExperiment;
-
-  ClassDef(CupGeneralTCB, 0)
 };
 
 inline void CupGeneralTCB::SetConfig(AbsConfList * configs) { fConfigs = configs; }
-
-inline void CupGeneralTCB::SetIPAddress(const char * ipaddr)
-{
-  if (fTCBType == TCB::MINI) { static_cast<CupMiniTCB *>(fTCB)->SetIPAddress(ipaddr); }
-}
 
 inline void CupGeneralTCB::SetADCType(ADC::TYPE type) { fADCType = type; }

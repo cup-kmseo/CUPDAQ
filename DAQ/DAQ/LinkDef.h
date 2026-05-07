@@ -5,6 +5,5 @@
 #pragma link off all    functions;
 
 #pragma link C++ class  CupDAQManager;
-#pragma link C++ class  CupGeneralTCB;
 
 #endif
