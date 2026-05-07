@@ -1,19 +1,17 @@
-#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <thread>
 
-#include "DAQ/CupGeneralTCB.hh"
-#include "DAQUtils/ELog.hh"
-#include "OnlConsts/onlconsts.hh"
+#include "CupGeneralTCB.hh"
+#include "CupMiniTCB.hh"
+#include "CupTCB.hh"
+#include "ELog.hh"
+#include "onlconsts.hh"
 
 using namespace std;
 
-ClassImp(CupGeneralTCB)
-
 CupGeneralTCB::CupGeneralTCB()
-  : TObject(),
-    fTCB(nullptr),
+  : fTCB(nullptr),
     fTCBConfig(nullptr),
     fConfigs(nullptr),
     fTCBType(TCB::V1),
@@ -101,14 +99,6 @@ bool CupGeneralTCB::Config()
       return false;
     }
 
-    if (name.find("AMOREADC") != std::string_view::npos) {
-      int bcount = fTCB->ReadBCount(mid);
-      if (bcount) {
-        std::unique_ptr<unsigned char[]> data(new unsigned char[bcount * kKILOBYTES]);
-        fTCB->ReadData(mid, bcount, data.get());
-      }
-    }
-
     if (name.find("SADC") == std::string_view::npos) { fTCB->AlignDRAM(mid); }
   }
 
@@ -139,6 +129,11 @@ bool CupGeneralTCB::Config()
   if (retval) { INFO("all modules configuration done"); }
 
   return retval;
+}
+
+void CupGeneralTCB::SetIPAddress(const char * ipaddr)
+{
+  if (fTCBType == TCB::MINI) { static_cast<CupMiniTCB *>(fTCB)->SetIPAddress(ipaddr); }
 }
 
 bool CupGeneralTCB::StartTrigger()

@@ -1,10 +1,12 @@
 #include <filesystem>
+#include <thread>
 
 #include "TMessage.h"
 #include "TServerSocket.h"
 
-#include "DAQ/CupDAQManager.hh"
-#include "DAQConfig/RunConfig.hh"
+#include "CupDAQManager.hh"
+#include "RunConfig.hh"
+#include "ELog.hh"
 
 void CupDAQManager::Run()
 {
@@ -30,9 +32,6 @@ void CupDAQManager::Run()
     case DAQ::TCBCTRL: RC_TCBCTRLDAQ(); break;
     case DAQ::TCB: RC_TCB(); break;
     case DAQ::MERGER: RC_MERGER(); break;
-    case DAQ::NULLTCB: RC_NullTCB(); break;
-    case DAQ::NULLDAQ: RC_NullDAQ(); break;
-    case DAQ::NULLMERGER: RC_NullMERGER(); break;
     default: break;
   }
 }
@@ -48,75 +47,99 @@ void CupDAQManager::RC_TCB()
   std::thread th0(&CupDAQManager::TF_MsgServer, this);
   std::thread th1;
 
-  auto execute_run = [&]() {
+  auto execute_run = [&]()
+  {
     bool socketerror = false;
 
-    // prepare client sockets correspond to DAQs (ZeroMQ REQ)
+    // Max retries and wait interval (ms)
+    const int MAX_RETRIES = 5;
+    const int RETRY_WAIT_MS = 1000;
+
     for (int i = 0; i < daq->GetN(); i++) {
       int id = daq->GetID(i);
       if (id == fDAQID) { continue; }
 
       std::string ip = daq->GetIPAddr(id);
-      int port = daq->GetPort(id); // The ZMQ Control Port
+      int port = daq->GetPort(id);
       std::string daq_name = daq->GetDAQName(id);
       std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
 
-      try {
-        auto socket = std::make_unique<zmq::socket_t>(fZMQContext, zmq::socket_type::req);
+      auto socket = std::make_unique<zmq::socket_t>(fZMQContext, zmq::socket_type::req);
 
-        socket->set(zmq::sockopt::rcvtimeo, 2000);
-        socket->set(zmq::sockopt::sndtimeo, 2000);
-        socket->connect(endpoint);
+      // Set socket options for resilient connection
+      socket->set(zmq::sockopt::req_relaxed, 1);
+      socket->set(zmq::sockopt::rcvtimeo, 2000);
+      socket->set(zmq::sockopt::sndtimeo, 2000);
+      socket->set(zmq::sockopt::linger, 0); // Avoid hanging on close
 
-        nlohmann::json ping_json;
-        ping_json["command"] = "kQUERYDAQSTATUS";
-        std::string ping_str = ping_json.dump();
+      socket->connect(endpoint);
+
+      nlohmann::json ping_json;
+      ping_json["command"] = "kQUERYDAQSTATUS";
+      std::string ping_str = ping_json.dump();
+
+      bool connected_and_verified = false;
+
+      for (int retry = 0; retry < MAX_RETRIES; retry++) {
+        INFO("[%s] Attempting to connect... (%d/%d) at %s", daq_name.c_str(), retry + 1,
+             MAX_RETRIES, endpoint.c_str());
 
         zmq::message_t request(ping_str.size());
         std::memcpy(request.data(), ping_str.c_str(), ping_str.size());
 
-        if (!socket->send(request, zmq::send_flags::none)) {
-          throw std::runtime_error("Send failed");
+        auto send_res = socket->send(request, zmq::send_flags::none);
+        if (!send_res) {
+          WARNING("[%s] Send failed, retrying...", daq_name.c_str());
+          std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_WAIT_MS));
+          continue;
         }
 
         zmq::message_t reply;
-        auto res = socket->recv(reply, zmq::recv_flags::none);
-
-        if (!res) {
-          socketerror = true;
-          ERROR("%s connection failed (timeout) at %s", daq_name.c_str(), endpoint.c_str());
-          break;
+        auto recv_res = socket->recv(reply, zmq::recv_flags::none);
+        if (!recv_res) {
+          WARNING("[%s] Receive timeout, server might be starting up...", daq_name.c_str());
+          std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_WAIT_MS));
+          continue;
         }
 
-        fDAQSocket.push_back(std::move(socket));
-        INFO("%s connected and verified at %s", daq_name.c_str(), endpoint.c_str());
-      }
-      catch (const std::exception & e) {
-        socketerror = true;
-        ERROR("%s connection failed at %s: %s", daq_name.c_str(), endpoint.c_str(), e.what());
+        // Successfully received a reply
+        connected_and_verified = true;
         break;
       }
+
+      if (!connected_and_verified) {
+        socketerror = true;
+        ERROR("[%s] Failed to connect after %d attempts at %s", daq_name.c_str(), MAX_RETRIES,
+              endpoint.c_str());
+        // Depending on system requirements, you might 'continue' to check other nodes
+        // or 'break' if all nodes are mandatory.
+        continue;
+      }
+
+      fDAQSocket.push_back(std::move(socket));
+      INFO("[%s] Connected and verified at %s", daq_name.c_str(), endpoint.c_str());
     }
 
     if (socketerror) {
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
 
-    // checking DAQs' status == kBOOTED
     if (!WaitDAQStatus(RUNSTATE::kBOOTED)) {
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
     RUNSTATE::SetState(fRunStatusTCB, RUNSTATE::kBOOTED);
     INFO("all DAQs were booted");
 
-    // wait for config run command
-    int state = WaitCommand(fDoConfigRunTCB, fDoExitTCB);
+    int state = WaitCommand(fDoConfigRunTCB, fDoExitTCB, fRunStatusTCB);
     if (state != 0) {
       if (state == 1) { INFO("run=%d exited by Run Control", fRunNumber); }
-      else if (state < 0) {
+      else {
         RUNSTATE::SetError(fRunStatusTCB);
+        SendCommandToDAQs("kSETERROR");
       }
       return;
     }
@@ -125,33 +148,32 @@ void CupDAQManager::RC_TCB()
     fTCB->SetConfig(fConfigList);
     if (fTCB->Open() != 0) {
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
 
     if (!fTCB->Config()) {
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
 
-    //// generating TServersocket
     int config_port = fDAQPort + PORT_OFFSET::CONFIG;
     auto * configServer = new TServerSocket(config_port, kTRUE);
     if (!configServer->IsValid()) {
       ERROR("Failed to start TServerSocket on port %d", config_port);
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
     SendCommandToDAQs("kCONFIGRUN");
 
     int expected_clients = 0;
     for (int i = 0; i < daq->GetN(); i++) {
       int id = daq->GetID(i);
       std::string name = daq->GetDAQName(id);
-
-      // If the name contains "DAQ", it is a client
       if (name.find("DAQ") != std::string::npos) { expected_clients++; }
     }
 
@@ -186,14 +208,15 @@ void CupDAQManager::RC_TCB()
             expected_clients);
       delete configServer;
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
 
-    delete configServer; // Close server socket after all DAQs received the list
+    delete configServer;
 
-    // checking DAQs' status == kCONFIGURED
     if (!WaitDAQStatus(RUNSTATE::kCONFIGURED)) {
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
     RUNSTATE::SetState(fRunStatusTCB, RUNSTATE::kCONFIGURED);
@@ -201,47 +224,50 @@ void CupDAQManager::RC_TCB()
 
     th1 = std::thread(&CupDAQManager::TF_SplitOutput, this, true);
 
-    // wait for start run command
-    state = WaitCommand(fDoStartRunTCB, fDoExitTCB);
+    state = WaitCommand(fDoStartRunTCB, fDoExitTCB, fRunStatusTCB);
     if (state != 0) {
       if (state == 1) { INFO("run=%d exited by Run Control", fRunNumber); }
-      else if (state < 0) {
+      else {
         RUNSTATE::SetError(fRunStatusTCB);
       }
+      fDoEndRunTCB.store(true);
       return;
     }
 
     fTCB->StartTrigger();
     time(&fStartDatime);
-
     SendCommandToDAQs("kSTARTRUN");
 
-    // checking DAQs' status == kRUNNING
     if (!WaitDAQStatus(RUNSTATE::kRUNNING)) {
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
     RUNSTATE::SetState(fRunStatusTCB, RUNSTATE::kRUNNING);
     INFO("all DAQs are running");
 
     while (true) {
-      if (fDoEndRunTCB || IsForcedEndRunFile()) { break; }
-      if (!IsDAQRunning()) { break; }
-      if (fDoSplitOutputFile) {
+      if (fDoEndRunTCB.load() || IsForcedEndRunFile()) { break; }
+      if (!CheckDAQStatus(RUNSTATE::kRUNNING)) {
+        RUNSTATE::SetError(fRunStatusTCB);
+        SendCommandToDAQs("kSETERROR");
+        return;
+      }
+      if (fDoExitTCB.load()) { return; }
+      if (fDoSplitOutputFile.load()) {
         SendCommandToDAQs("kSPLITOUTPUTFILE");
-        fDoSplitOutputFile = false;
+        fDoSplitOutputFile.store(false);
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     fTCB->StopTrigger();
     time(&fEndDatime);
-
     SendCommandToDAQs("kENDRUN");
 
-    // checking DAQs' status == kRUNENDED
     if (!WaitDAQStatus(RUNSTATE::kRUNENDED)) {
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
     RUNSTATE::SetState(fRunStatusTCB, RUNSTATE::kRUNENDED);
@@ -249,6 +275,7 @@ void CupDAQManager::RC_TCB()
 
     if (!WaitDAQStatus(RUNSTATE::kPROCENDED)) {
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
     RUNSTATE::SetState(fRunStatusTCB, RUNSTATE::kPROCENDED);
@@ -257,7 +284,7 @@ void CupDAQManager::RC_TCB()
 
   execute_run();
 
-  WaitCommand(fDoExitTCB);
+  WaitCommand(fDoExitTCB, fDoExitTCB, fRunStatusTCB);
 
   if (th1.joinable()) { th1.join(); }
 
@@ -283,7 +310,6 @@ void CupDAQManager::RC_TCBCTRLDAQ()
   fDAQPort = daq->GetPort(fDAQID);
 
   th0 = std::thread(&CupDAQManager::TF_MsgServer, this);
-  RUNSTATE::SetState(fRunStatus, RUNSTATE::kBOOTED);
 
   if (fDoSendEvent) {
     std::string target_name = GetADCName(fADCType);
@@ -292,33 +318,32 @@ void CupDAQManager::RC_TCBCTRLDAQ()
     for (int i = 0; i < daq->GetN(); i++) {
       int id = daq->GetID(i);
       const std::string & daq_name = daq->GetDAQName(id);
-
       if (daq_name.find(target_name) != std::string::npos) {
-        fMergeServerIPAddr = daq->GetIPAddr(id);
+        fMergeServerHost = daq->GetIPAddr(id);
         fMergeServerPort = daq->GetPort(id) + PORT_OFFSET::DATA;
       }
     }
   }
 
-  if (WaitCommand(fDoConfigRun, fDoExit) != 0) {
+  RUNSTATE::SetState(fRunStatus, RUNSTATE::kBOOTED);
+
+  int state = WaitCommand(fDoConfigRun, fDoExit, fRunStatus);
+  if (state != 0) {
+    if (state > 0) { WARNING("run=%d exited by TCB", fRunNumber); }
+    else {
+      ERROR("run=%d exit caused error", fRunNumber);
+    }
     if (th0.joinable()) { th0.join(); }
-    WARNING("run=%d exited by TCB", fRunNumber);
     return;
   }
 
-  // ----------------------------------------------
-  // Request fConfigList to server and receive
-  // ----------------------------------------------
   std::string tcb_ip = daq->GetIPAddr(0);
   int config_port = daq->GetPort(0) + PORT_OFFSET::CONFIG;
 
   TSocket * configSock = nullptr;
-
-  // Retry logic to ensure connection even if server is slightly delayed
   for (int retry = 0; retry < 10; ++retry) {
     configSock = new TSocket(tcb_ip.c_str(), config_port);
     if (configSock->IsValid()) { break; }
-
     delete configSock;
     configSock = nullptr;
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -327,33 +352,31 @@ void CupDAQManager::RC_TCBCTRLDAQ()
   if (!configSock || !configSock->IsValid()) {
     ERROR("Failed to connect to TCB Config Server at %s:%d", tcb_ip.c_str(), config_port);
     RUNSTATE::SetError(fRunStatus);
+    if (th0.joinable()) { th0.join(); }
     return;
   }
 
-  // 1. Send Handshake to Server
   TMessage req(kMESS_STRING);
   TString myName = fDAQName.c_str();
   req.WriteString(myName.Data());
   configSock->Send(req);
 
-  // 2. Receive updated fConfigList
   TMessage * mess = nullptr;
   if (configSock->Recv(mess) <= 0 || mess == nullptr) {
     ERROR("Failed to receive fConfigList message from TCB");
     delete configSock;
     RUNSTATE::SetError(fRunStatus);
+    if (th0.joinable()) { th0.join(); }
     return;
   }
 
-  // Read object from TMessage and cast it back
   fConfigList = (decltype(fConfigList))mess->ReadObject(mess->GetClass());
-
   delete mess;
   delete configSock;
   INFO("Successfully received updated fConfigList from TCB");
-  // -------------------------------------------------------------------
 
-  auto execute_run = [&]() {
+  auto execute_run = [&]()
+  {
     if (!AddADC(fConfigList)) {
       RUNSTATE::SetError(fRunStatus);
       return;
@@ -367,6 +390,8 @@ void CupDAQManager::RC_TCBCTRLDAQ()
       return;
     }
 
+    if (fSoftTrigger) { fSoftTrigger->DoConfig(fConfigList); }
+
     th1 = std::thread(&CupDAQManager::TF_RunManager, this);
     th2 = std::thread(&CupDAQManager::TF_ReadData, this);
     th3 = std::thread(&CupDAQManager::TF_SortEvent, this);
@@ -374,26 +399,47 @@ void CupDAQManager::RC_TCBCTRLDAQ()
 
     if (!fDoSendEvent) { th5 = std::thread(&CupDAQManager::TF_WriteEvent, this); }
     else {
-      th5 = std::thread(&CupDAQManager::TF_SendEvent, this);
+      th5 = std::thread(&CupDAQManager::TF_SendData, this);
     }
 
     th6 = std::thread(&CupDAQManager::TF_TriggerMon, this);
     th7 = std::thread(&CupDAQManager::TF_ShrinkToFit, this);
-
     if (fVerboseLevel > 0) { th8 = std::thread(&CupDAQManager::TF_DebugMon, this); }
 
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kCONFIGURED);
 
-    if (WaitCommand(fDoStartRun, fDoExit) != 0) {
-      WARNING("run=%d exited by TCB", fRunNumber);
+    int state = WaitCommand(fDoStartRun, fDoExit, fRunStatus);
+    if (state != 0) {
+      if (state > 0) { WARNING("run=%d exited by TCB", fRunNumber); }
+      else {
+        ERROR("run=%d exit caused error", fRunNumber);
+      }
       return;
     }
 
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNNING);
     time(&fStartDatime);
 
-    if (WaitCommand(fDoEndRun, fRunStatus) != 0) {
-      WARNING("run=%d ended by error state", fRunNumber);
+    state = WaitCommand(fDoEndRun, fDoExit, fRunStatus);
+    if (state != 0) {
+      if (state > 0) { WARNING("run=%d exited by TCB", fRunNumber); }
+      else {
+        ERROR("run=%d exit caused error", fRunNumber);
+      }
+      return;
+    }
+
+    RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDING);
+    INFO("changed run state to RUNENDING");
+
+    while (true) {
+      bool allEnded = fReadStatus.load() == ENDED && fSortStatus.load() == ENDED &&
+                      fBuildStatus.load() == ENDED &&
+                      (fDoSendEvent ? fSendStatus.load() : fWriteStatus.load()) == ENDED;
+
+      if (allEnded) break;
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDED);
@@ -402,20 +448,20 @@ void CupDAQManager::RC_TCBCTRLDAQ()
 
   execute_run();
 
-  if (th8.joinable()) th8.join();
-  if (th7.joinable()) th7.join();
-  if (th6.joinable()) th6.join();
-  if (th5.joinable()) th5.join();
-  if (th4.joinable()) th4.join();
-  if (th3.joinable()) th3.join();
-  if (th2.joinable()) th2.join();
+  if (th8.joinable()) { th8.join(); }
+  if (th7.joinable()) { th7.join(); }
+  if (th6.joinable()) { th6.join(); }
+  if (th5.joinable()) { th5.join(); }
+  if (th4.joinable()) { th4.join(); }
+  if (th3.joinable()) { th3.join(); }
+  if (th2.joinable()) { th2.join(); }
 
   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   RUNSTATE::SetState(fRunStatus, RUNSTATE::kPROCENDED);
 
-  if (th1.joinable()) th1.join();
+  if (th1.joinable()) { th1.join(); }
 
-  WaitCommand(fDoExit);
+  WaitCommand(fDoExit, fDoExit, fRunStatus);
 
   if (th0.joinable()) { th0.join(); }
   CloseDAQ();
@@ -438,15 +484,11 @@ void CupDAQManager::RC_MERGER()
 
   for (int i = 0; i < daq->GetN(); i++) {
     int id = daq->GetID(i);
-
-    if (id == fDAQID) continue;
+    if (id == fDAQID) { continue; }
 
     const std::string & daq_name = daq->GetDAQName(id);
-
     if (daq_name.find(adcname) != std::string::npos) {
-      auto evtbuf = std::make_unique<ConcurrentDeque<std::unique_ptr<BuiltEvent>>>();
-      fRecvEventBuffer.emplace_back(id, std::move(evtbuf));
-
+      fRecvEventBuffers[id] = std::make_unique<BuiltEventBuffer>();
       INFO("event buffer for %s prepared", daq_name.c_str());
     }
   }
@@ -471,34 +513,61 @@ void CupDAQManager::RC_MERGER()
   th0 = std::thread(&CupDAQManager::TF_MsgServer, this);
   RUNSTATE::SetState(fRunStatus, RUNSTATE::kBOOTED);
 
-  if (WaitCommand(fDoConfigRun, fDoExit) != 0) {
+  int state = WaitCommand(fDoConfigRun, fDoExit, fRunStatus);
+  if (state != 0) {
+    if (state > 0) { WARNING("run=%d exited by TCB", fRunNumber); }
+    else {
+      ERROR("run=%d exit caused error", fRunNumber);
+    }
     if (th0.joinable()) { th0.join(); }
-    WARNING("run=%d exited by TCB", fRunNumber);
     return;
   }
 
-  auto execute_run = [&]() {
+  auto execute_run = [&]()
+  {
+    if (fSoftTrigger) { fSoftTrigger->DoConfig(fConfigList); }
+
     th1 = std::thread(&CupDAQManager::TF_RunManager, this);
-    th2 = std::thread(&CupDAQManager::TF_MergeEvent, this);
+    th2 = std::thread(&CupDAQManager::TF_BuildEvent, this);
     th3 = std::thread(&CupDAQManager::TF_WriteEvent, this);
     th4 = std::thread(&CupDAQManager::TF_TriggerMon, this);
     th5 = std::thread(&CupDAQManager::TF_ShrinkToFit, this);
     th6 = std::thread(&CupDAQManager::TF_DataServer, this);
-
     if (fVerboseLevel > 0) { th7 = std::thread(&CupDAQManager::TF_DebugMon, this); }
 
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kCONFIGURED);
 
-    if (WaitCommand(fDoStartRun, fDoExit) != 0) {
-      WARNING("run=%d exited by TCB", fRunNumber);
+    state = WaitCommand(fDoStartRun, fDoExit, fRunStatus);
+    if (state != 0) {
+      if (state > 0) { WARNING("run=%d exited by TCB", fRunNumber); }
+      else {
+        ERROR("run=%d exit caused error", fRunNumber);
+      }
       return;
     }
 
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNNING);
     time(&fStartDatime);
 
-    if (WaitCommand(fDoEndRun, fRunStatus) != 0) {
-      WARNING("run=%d ended by error state", fRunNumber);
+    state = WaitCommand(fDoEndRun, fDoExit, fRunStatus);
+    if (state != 0) {
+      if (state > 0) { WARNING("run=%d exited by TCB", fRunNumber); }
+      else {
+        ERROR("run=%d exit caused error", fRunNumber);
+      }
+      return;
+    }
+
+    RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDING);
+    INFO("changed run state to RUNENDING");
+
+    while (true) {
+      bool allEnded = fRecvStatus.load() == ENDED && fBuildStatus.load() == ENDED &&
+                      fWriteStatus.load() == ENDED;
+
+      if (allEnded) break;
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDED);
@@ -507,21 +576,21 @@ void CupDAQManager::RC_MERGER()
 
   execute_run();
 
-  if (th7.joinable()) th7.join();
-  if (th6.joinable()) th6.join();
-  if (th5.joinable()) th5.join();
-  if (th4.joinable()) th4.join();
-  if (th3.joinable()) th3.join();
-  if (th2.joinable()) th2.join();
+  if (th7.joinable()) { th7.join(); }
+  if (th6.joinable()) { th6.join(); }
+  if (th5.joinable()) { th5.join(); }
+  if (th4.joinable()) { th4.join(); }
+  if (th3.joinable()) { th3.join(); }
+  if (th2.joinable()) { th2.join(); }
 
-  fRecvEventBuffer.clear();
+  fRecvEventBuffers.clear();
 
   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   RUNSTATE::SetState(fRunStatus, RUNSTATE::kPROCENDED);
 
-  if (th1.joinable()) th1.join();
+  if (th1.joinable()) { th1.join(); }
 
-  WaitCommand(fDoExit);
+  WaitCommand(fDoExit, fDoExit, fRunStatus);
 
   if (th0.joinable()) { th0.join(); }
 
@@ -537,12 +606,14 @@ void CupDAQManager::RC_STDDAQ()
 
   std::thread th1, th2, th3, th4, th5, th6, th7, th8, th9;
 
-  auto execute_run = [&]() {
+  auto execute_run = [&]()
+  {
     if (!ConfigureDAQ()) { return; }
     if (!PrepareDAQ()) { return; }
     if (!InitializeDAQ()) { return; }
 
-    // thread
+    if (fSoftTrigger) { fSoftTrigger->DoConfig(fConfigList); }
+
     th1 = std::thread(&CupDAQManager::TF_RunManager, this);
     th2 = std::thread(&CupDAQManager::TF_ReadData, this);
     th3 = std::thread(&CupDAQManager::TF_SortEvent, this);
@@ -556,19 +627,19 @@ void CupDAQManager::RC_STDDAQ()
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kCONFIGURED);
 
-    if (th9.joinable()) th9.join();
-    if (th8.joinable()) th8.join();
-    if (th7.joinable()) th7.join();
-    if (th6.joinable()) th6.join();
-    if (th5.joinable()) th5.join();
-    if (th4.joinable()) th4.join();
-    if (th3.joinable()) th3.join();
-    if (th2.joinable()) th2.join();
+    if (th9.joinable()) { th9.join(); }
+    if (th8.joinable()) { th8.join(); }
+    if (th7.joinable()) { th7.join(); }
+    if (th6.joinable()) { th6.join(); }
+    if (th5.joinable()) { th5.join(); }
+    if (th4.joinable()) { th4.join(); }
+    if (th3.joinable()) { th3.join(); }
+    if (th2.joinable()) { th2.join(); }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kPROCENDED);
 
-    if (th1.joinable()) th1.join();
+    if (th1.joinable()) { th1.join(); }
   };
 
   execute_run();
@@ -591,41 +662,45 @@ void CupDAQManager::RC_TCBDAQ()
     return;
   }
 
-  std::thread th1, th2, th3, th4, th5, th6, th7, th8, th9;
-
-  auto execute_run = [&]() {
+  auto execute_run = [&]()
+  {
     if (!fTCB->Config()) { return; }
     if (!AddADC(fConfigList)) { return; }
     if (!PrepareDAQ()) { return; }
     if (!OpenDAQ()) { return; }
 
-    // thread
-    th1 = std::thread(&CupDAQManager::TF_RunManager, this);
-    th2 = std::thread(&CupDAQManager::TF_ReadData, this);
-    th3 = std::thread(&CupDAQManager::TF_SortEvent, this);
-    th4 = std::thread(&CupDAQManager::TF_BuildEvent, this);
-    th5 = std::thread(&CupDAQManager::TF_WriteEvent, this);
-    th6 = std::thread(&CupDAQManager::TF_TriggerMon, this);
-    th7 = std::thread(&CupDAQManager::TF_SplitOutput, this, false);
-    th8 = std::thread(&CupDAQManager::TF_ShrinkToFit, this);
+    if (fSoftTrigger) { fSoftTrigger->DoConfig(fConfigList); }
+
+    std::thread th1 = std::thread(&CupDAQManager::TF_RunManager, this);
+    std::thread th2 = std::thread(&CupDAQManager::TF_ReadData, this);
+    std::thread th3 = std::thread(&CupDAQManager::TF_SortEvent, this);
+    std::thread th4 = std::thread(&CupDAQManager::TF_BuildEvent, this);
+    std::thread th5 = std::thread(&CupDAQManager::TF_WriteEvent, this);
+    std::thread th6 = std::thread(&CupDAQManager::TF_TriggerMon, this);
+    std::thread th7 = std::thread(&CupDAQManager::TF_SplitOutput, this, false);
+    std::thread th8 = std::thread(&CupDAQManager::TF_ShrinkToFit, this);
+    std::thread th9;
     if (fVerboseLevel > 0) { th9 = std::thread(&CupDAQManager::TF_DebugMon, this); }
+    std::thread th10;
+    if (fDoHistograming) { th10 = std::thread(&CupDAQManager::TF_Histogramer, this); }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kCONFIGURED);
 
-    if (th9.joinable()) th9.join();
-    if (th8.joinable()) th8.join();
-    if (th7.joinable()) th7.join();
-    if (th6.joinable()) th6.join();
-    if (th5.joinable()) th5.join();
-    if (th4.joinable()) th4.join();
-    if (th3.joinable()) th3.join();
-    if (th2.joinable()) th2.join();
+    if (th10.joinable()) { th10.join(); }
+    if (th9.joinable()) { th9.join(); }
+    if (th8.joinable()) { th8.join(); }
+    if (th7.joinable()) { th7.join(); }
+    if (th6.joinable()) { th6.join(); }
+    if (th5.joinable()) { th5.join(); }
+    if (th4.joinable()) { th4.join(); }
+    if (th3.joinable()) { th3.join(); }
+    if (th2.joinable()) { th2.join(); }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kPROCENDED);
 
-    if (th1.joinable()) th1.join();
+    if (th1.joinable()) { th1.join(); }
   };
 
   execute_run();

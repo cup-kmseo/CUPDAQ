@@ -1,4 +1,4 @@
-#include "DAQConfig/MADCSConf.hh"
+#include "MADCSConf.hh"
 
 ClassImp(MADCSConf)
 

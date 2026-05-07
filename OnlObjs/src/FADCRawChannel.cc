@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "OnlObjs/FADCRawChannel.hh"
+#include "FADCRawChannel.hh"
 
 ClassImp(FADCRawChannel)
 

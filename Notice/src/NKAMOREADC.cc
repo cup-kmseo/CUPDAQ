@@ -3,8 +3,8 @@
 #include <thread>
 #include <unistd.h>
 
-#include "DAQUtils/ELog.hh"
-#include "Notice/NKAMOREADC.hh"
+#include "ELog.hh"
+#include "NKAMOREADC.hh"
 
 namespace {
 constexpr uint16_t kVENDOR_ID = 0x0547;

@@ -1,6 +1,8 @@
-#include "DAQConfig/RunConfig.hh"
-#include "DAQConfig/TriggerLookupTable.hh"
-#include "DAQUtils/ELog.hh"
+#include <sstream>
+
+#include "RunConfig.hh"
+#include "TriggerLookupTable.hh"
+#include "ELog.hh"
 
 RunConfig::RunConfig() { fConfigs = std::make_unique<AbsConfList>(); }
 
@@ -40,6 +42,14 @@ bool RunConfig::ReadConfig(const char * name)
       }
     }
 
+    std::string yaml_str;
+    {
+      std::ostringstream oss;
+      oss << merged_node;
+      yaml_str = oss.str();
+    }
+    fConfigs->SetYAMLString(yaml_str.c_str());
+
     // Now call the config functions only ONCE with the merged node
     ConfigDAQ(merged_node);
     ConfigTCB(merged_node);
@@ -49,6 +59,8 @@ bool RunConfig::ReadConfig(const char * name)
     ConfigFADCS(merged_node);
     ConfigGADCS(merged_node);
     ConfigMADCS(merged_node);
+
+    fConfigs->Sort();
 
     INFO("reading config %s is done", name);
     return true;

@@ -1,21 +1,19 @@
 #ifdef ENABLE_HDF5
-#include "HDF5Utils/EDM.hh"
-#include "HDF5Utils/H5FADCEvent.hh"
-#include "HDF5Utils/H5SADCEvent.hh"
+#include "EDM.hh"
+#include "H5FADCEvent.hh"
+#include "H5SADCEvent.hh"
 #endif
 
 #include <cstdlib>
 #include <string>
 
-#include "DAQ/CupDAQManager.hh"
-#include "OnlObjs/ADCHeader.hh"
-#include "OnlObjs/FADCRawChannel.hh"
-#include "OnlObjs/FADCRawEvent.hh"
-#include "OnlObjs/SADCRawEvent.hh"
+#include "CupDAQManager.hh"
+#include "ELog.hh"
+#include "ADCHeader.hh"
+#include "FADCRawChannel.hh"
+#include "FADCRawEvent.hh"
+#include "SADCRawEvent.hh"
 
-// =====================================================================
-// HDF5 Enabled Implementation
-// =====================================================================
 #ifdef ENABLE_HDF5
 
 void CupDAQManager::WriteFADC_MOD_HDF5()
@@ -24,7 +22,10 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
   h5event->SetNDP(fNDP);
   fH5Event = h5event;
 
-  fHDF5File->SetEvent(h5event);
+  h5event->SetBufferCapacity(100);
+  h5event->SetBufferMaxBytes(32 * 1024 * 1024);
+
+  fHDF5File->SetData(h5event);
   if (!fHDF5File->Open()) {
     ERROR("can't open hdf5 output file");
     RUNSTATE::SetError(fRunStatus);
@@ -38,38 +39,46 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
   double perror = 0;
   double integral = 0;
 
-  int nadcch = 4;
+  int nadcch = 0;
   ADC::TYPE adctype = static_cast<ADC::TYPE>(static_cast<int>(fADCType) % 10);
   switch (adctype) {
-    case ADC::FADC: nadcch = 4; break;
-    case ADC::GADC: nadcch = 16; break;
-    case ADC::MADC: nadcch = 4; break;
-    case ADC::IADC: nadcch = 40; break;
+    case ADC::FADC: nadcch = kNCHFADC; break;
+    case ADC::GADC: nadcch = kNCHGADC; break;
+    case ADC::MADC: nadcch = kNCHMADC; break;
+    case ADC::IADC: nadcch = kNCHIADC; break;
     default: break;
+  }
+
+  if (nadcch == 0) {
+    ERROR("invalid adc type");
+    RUNSTATE::SetError(fRunStatus);
+    return;
   }
 
   std::unique_lock<std::mutex> wlock(fWriteFileMutex, std::defer_lock);
 
-  fWriteStatus = RUNNING;
+  fWriteStatus.store(RUNNING);
+
   while (true) {
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
+    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) { break; }
 
     if (fBuiltEventBuffer1.empty()) {
-      if (fBuildStatus == ENDED || fMergeStatus == ENDED) break;
+      if (fBuildStatus.load() == ENDED) { break; }
     }
     else {
       StartBenchmark("WriteEvent");
+
       chdata.clear();
 
       auto bevent_opt = fBuiltEventBuffer1.pop_front();
       if (!bevent_opt.has_value()) {
-        int size_empty = fBuiltEventBuffer1.size();
+        int size_empty = static_cast<int>(fBuiltEventBuffer1.size());
         ThreadSleep(fWriteSleep, perror, integral, size_empty);
         continue;
       }
 
-      std::unique_ptr<BuiltEvent> bevent = std::move(bevent_opt.value());
-      BuiltEvent * ev = bevent.get();
+      std::shared_ptr<BuiltEvent> bevent_ptr = bevent_opt.value();
+      BuiltEvent * ev = bevent_ptr.get();
 
       eventinfo.tnum = ev->GetTriggerNumber();
       eventinfo.ttime = ev->GetTriggerTime();
@@ -90,7 +99,7 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
         }
 
         for (int i = 0; i < nadcch; ++i) {
-          if (header->GetZero(i)) continue;
+          if (header->GetZero(i)) { continue; }
 
           FChannel_t channel{};
           channel.id = conf->PID(i);
@@ -116,10 +125,11 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
         RUNSTATE::SetError(fRunStatus);
         break;
       }
+
       StopBenchmark("WriteEvent");
     }
 
-    int size = fBuiltEventBuffer1.size();
+    int size = static_cast<int>(fBuiltEventBuffer1.size());
     ThreadSleep(fWriteSleep, perror, integral, size);
   }
 }
@@ -129,10 +139,10 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
   auto * h5event = new H5SADCEvent;
   fH5Event = h5event;
 
-  h5event->SetBufferEventCapacity(1000);
+  h5event->SetBufferCapacity(1000);
   h5event->SetBufferMaxBytes(32 * 1024 * 1024);
 
-  fHDF5File->SetEvent(h5event);
+  fHDF5File->SetData(h5event);
   if (!fHDF5File->Open()) {
     ERROR("can't open hdf5 output file");
     RUNSTATE::SetError(fRunStatus);
@@ -155,26 +165,28 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
 
   std::unique_lock<std::mutex> wlock(fWriteFileMutex, std::defer_lock);
 
-  fWriteStatus = RUNNING;
+  fWriteStatus.store(RUNNING);
+
   while (true) {
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
+    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) { break; }
 
     if (fBuiltEventBuffer1.empty()) {
-      if (fBuildStatus == ENDED || fMergeStatus == ENDED) break;
+      if (fBuildStatus.load() == ENDED) { break; }
     }
     else {
       StartBenchmark("WriteEvent");
+
       chdata.clear();
 
       auto bevent_opt = fBuiltEventBuffer1.pop_front();
       if (!bevent_opt.has_value()) {
-        int size_empty = fBuiltEventBuffer1.size();
+        int size_empty = static_cast<int>(fBuiltEventBuffer1.size());
         ThreadSleep(fWriteSleep, perror, integral, size_empty);
         continue;
       }
 
-      std::unique_ptr<BuiltEvent> bevent = std::move(bevent_opt.value());
-      BuiltEvent * ev = bevent.get();
+      std::shared_ptr<BuiltEvent> bevent_ptr = bevent_opt.value();
+      BuiltEvent * ev = bevent_ptr.get();
 
       unsigned long fastttime = UINT64_MAX;
       unsigned int tnum = 0;
@@ -195,7 +207,7 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
         AbsConf * conf = fConfigList->FindConfig(fADCType, header->GetMID());
 
         for (int i = 0; i < nadcch; ++i) {
-          if (header->GetZero(i)) continue;
+          if (header->GetZero(i)) { continue; }
 
           AChannel_t channel{};
           channel.id = conf->PID(i);
@@ -226,7 +238,7 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
       StopBenchmark("WriteEvent");
     }
 
-    int size = fBuiltEventBuffer1.size();
+    int size = static_cast<int>(fBuiltEventBuffer1.size());
     ThreadSleep(fWriteSleep, perror, integral, size);
   }
 }
@@ -259,7 +271,7 @@ long CupDAQManager::OpenNewHDF5File(const char * filename)
 
     fHDF5File = new H5DataWriter(filename, fCompressionLevel);
     fHDF5File->SetSubrun(subnum);
-    fHDF5File->SetEvent(fH5Event);
+    fHDF5File->SetData(fH5Event);
 
     if (!fHDF5File->Open()) {
       ERROR("can't open output file %s", filename);
@@ -271,15 +283,12 @@ long CupDAQManager::OpenNewHDF5File(const char * filename)
   return retval;
 }
 
-// =====================================================================
-// HDF5 Disabled Implementation (Stub Functions)
-// =====================================================================
 #else
 
 void CupDAQManager::WriteFADC_MOD_HDF5()
 {
   ERROR("HDF5 is not enabled in this build. Cannot write FADC data.");
-  RUNSTATE::SetError(fRunStatus); // RunStatus 에러 처리 추가 권장
+  RUNSTATE::SetError(fRunStatus);
 }
 
 void CupDAQManager::WriteSADC_MOD_HDF5()

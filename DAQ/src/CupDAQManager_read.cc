@@ -1,78 +1,92 @@
-#include "DAQ/CupDAQManager.hh"
+#include <thread>
+
+#include "CupDAQManager.hh"
+#include "ELog.hh"
 
 void CupDAQManager::TF_ReadData()
 {
-  fReadStatus = READY;
+  fReadStatus.store(READY);
 
-  if (!ThreadWait(fRunStatus, fDoExit)) {
+  if (!WaitRunState(fRunStatus, RUNSTATE::kRUNNING, fDoExit)) {
     WARNING("exited by exit command");
     return;
   }
-  INFO("reading data from ADCs started");
+
+  INFO("started");
 
   if (fTriggerMode == TRIGGER::GLOBAL) { ReadData_GLT(); }
   else {
     ReadData_MOD();
   }
 
-  if (fReadStatus != ERROR) { fReadStatus = ENDED; }
-  INFO("reading data from ADCs ended");
+  fReadStatus.store(ENDED);
+
+  INFO("ended");
 }
 
 void CupDAQManager::ReadData_GLT()
 {
-  const int nadc_int = GetEntries();
+  const int nadc_int = static_cast<int>(fADCList.size());
   if (nadc_int <= 0) {
     ERROR("no ADC modules in ReadData_GLT");
-    fReadStatus = ERROR;
     RUNSTATE::SetError(fRunStatus);
     return;
   }
-  const std::size_t nadc = static_cast<std::size_t>(nadc_int);
 
-  auto * theADC = static_cast<AbsADC *>(fCont[0]);
+  const std::size_t nadc = static_cast<std::size_t>(nadc_int);
   std::vector<int> bcounts(nadc);
+
+  auto * theADC = fADCList[0].get();
 
   double perror = 0.0;
   double integral = 0.0;
-
   bool endsleep = false;
+  std::chrono::time_point<std::chrono::steady_clock> end_run_start_time;
 
   std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
 
-  fReadStatus = RUNNING;
-  while (true) {
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
+  fReadStatus.store(RUNNING);
 
-    if (RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) && !endsleep) {
+  while (true) {
+    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) { break; }
+
+    if (fDoEndRun.load() && !endsleep) {
       INFO("waiting for reading remaining data in ADCs");
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       endsleep = true;
+      end_run_start_time = std::chrono::steady_clock::now();
     }
 
     int bcount = ReadBCountMin(bcounts.data());
     if (bcount < 0) {
       RUNSTATE::SetError(fRunStatus);
-      fReadStatus = ERROR;
       break;
     }
-    if (endsleep && fDoEndRun && bcount < fMinimumBCount) {
-      INFO("no more data in ADCs [bcount=%d]", bcount);
-      break;
+
+    if (endsleep) {
+      if (bcount < fMinimumBCount) {
+        INFO("no more data in ADCs [bcount=%d]", bcount);
+        break;
+      }
+      auto current_time = std::chrono::steady_clock::now();
+      std::chrono::duration<double> elapsed = current_time - end_run_start_time;
+      if (elapsed.count() > 5.0) {
+        WARNING("timeout (5s) reached while reading remaining data, force exit");
+        break;
+      }
     }
 
     int n = bcount / fMinimumBCount;
     int size = n;
     if (n > 16) { n = 16; }
-
     bcount = n * fMinimumBCount;
 
     if (bcount > 0) {
       StartBenchmark("ReadData");
+
       for (int i = 0; i < nadc_int; ++i) {
         if (ReadADCData(i, bcount) < 0) {
           RUNSTATE::SetError(fRunStatus);
-          fReadStatus = ERROR;
           break;
         }
       }
@@ -89,6 +103,7 @@ void CupDAQManager::ReadData_GLT()
       mlock.unlock();
 
       fTotalReadDataSize += static_cast<double>(nadc) * bcount * kKILOBYTES;
+
       StopBenchmark("ReadData");
     }
 

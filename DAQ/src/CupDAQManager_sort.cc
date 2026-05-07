@@ -1,35 +1,42 @@
-//
-// Created by cupsoft on 7/24/19.
-//
 #include <memory>
 
-#include "DAQ/CupDAQManager.hh"
-#include "DAQConfig/IADCTConf.hh"
-#include "OnlObjs/FADCRawEvent.hh"
-#include "OnlObjs/SADCRawEvent.hh"
+#include "CupDAQManager.hh"
+#include "IADCTConf.hh"
+#include "ELog.hh"
+#include "FADCRawEvent.hh"
+#include "SADCRawEvent.hh"
 
 void CupDAQManager::TF_SortEvent()
 {
-  fSortStatus = READY;
+  fSortStatus.store(READY);
 
-  if (!ThreadWait(fRunStatus, fDoExit)) {
+  if (!WaitRunState(fRunStatus, RUNSTATE::kRUNNING, fDoExit)) {
     WARNING("exited by exit command");
     return;
   }
-  INFO("sorting data started");
+
+  INFO("started");
 
   if (fTriggerMode == TRIGGER::SELF) { SortEvent_CHA(); }
   else {
     SortEvent_MOD();
   }
 
-  fSortStatus = ENDED;
-  INFO("sorting data ended");
+  fSortStatus.store(ENDED);
+
+  // read already ended, clear remaining data in ADCs
+  const int nadc_int = static_cast<int>(fADCList.size());
+  for (int i = 0; i < nadc_int; ++i) {
+    auto * adc = fADCList[i].get();
+    adc->Bclear();
+  }
+
+  INFO("ended");
 }
 
 void CupDAQManager::SortEvent_MOD()
 {
-  const int nadc_int = GetEntries();
+  const int nadc_int = static_cast<int>(fADCList.size());
   if (nadc_int <= 0) {
     WARNING("no ADC modules in SortEvent_MOD");
     return;
@@ -38,26 +45,29 @@ void CupDAQManager::SortEvent_MOD()
   double perror = 0.0;
   double integral = 0.0;
 
-  fSortStatus = RUNNING;
-  while (true) {
-    // emergent exit
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
+  fSortStatus.store(RUNNING);
 
-    if (fReadStatus == ENDED) {
+  while (true) {
+    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) { break; }
+
+    if (fReadStatus.load() == ENDED) {
       int remain = 0;
       for (int i = 0; i < nadc_int; ++i) {
-        auto * adc = static_cast<AbsADC *>(fCont[i]);
+        auto * adc = fADCList[i].get();
         remain += adc->Bsize();
       }
-      if (remain == 0) { break; }
+      if (remain == 0) {
+        INFO("all ADC buffers are empty, exit");
+        break;
+      }
     }
 
     StartBenchmark("SortEvent");
+
     int totalsize = 0;
     for (int i = 0; i < nadc_int; ++i) {
-      auto * adc = static_cast<AbsADC *>(fCont[i]);
+      auto * adc = fADCList[i].get();
       totalsize += adc->Bsize();
-
       if (adc->Bempty()) { continue; }
 
       auto chunkdata = adc->Bpop_front();
@@ -68,18 +78,27 @@ void CupDAQManager::SortEvent_MOD()
 
       for (int j = 0; j < nevent; ++j) {
         std::unique_ptr<AbsADCRaw> adcevent;
-
         switch (fADCType) {
           case ADC::FADCS:
-          case ADC::FADCT: adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::FADC); break;
+          case ADC::FADCT:
+            adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::FADC);
+            break;
           case ADC::GADCS:
-          case ADC::GADCT: adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::GADC); break;
-          case ADC::MADCS: adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::MADC); break;
+          case ADC::GADCT:
+            adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::GADC);
+            break;
+          case ADC::MADCS:
+            adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::MADC);
+            break;
           case ADC::SADCS:
-          case ADC::SADCT: adcevent = std::make_unique<SADCRawEvent>(fADCEventDataSize, ADC::SADC); break;
+          case ADC::SADCT:
+            adcevent = std::make_unique<SADCRawEvent>(fADCEventDataSize, ADC::SADC);
+            break;
           case ADC::IADCT: {
             auto * conf = static_cast<IADCTConf *>(adc->GetConfig());
-            if (conf->MODE() > 0) { adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::IADC); }
+            if (conf->MODE() > 0) {
+              adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::IADC);
+            }
             else {
               adcevent = std::make_unique<SADCRawEvent>(fADCEventDataSize, ADC::IADC);
             }
@@ -97,11 +116,11 @@ void CupDAQManager::SortEvent_MOD()
         buffer->push_back(std::move(adcevent));
       }
     }
+
     StopBenchmark("SortEvent");
 
     const int denom = (nadc_int > 0) ? nadc_int : 1;
     totalsize /= denom;
-
     ThreadSleep(fSortSleep, perror, integral, totalsize);
   }
 }

@@ -8,8 +8,8 @@
 #include <thread>
 #include <unistd.h>
 
-#include "DAQUtils/ELog.hh"
-#include "Notice/NKMiniTCB.hh"
+#include "ELog.hh"
+#include "NKMiniTCB.hh"
 
 namespace {
 constexpr int kPort = 5000;

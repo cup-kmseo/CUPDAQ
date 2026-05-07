@@ -1,5 +1,5 @@
-#include "RawObjs/FChannel.hh"
-#include "RawObjs/FChannelData.hh"
+#include "FChannel.hh"
+#include "FChannelData.hh"
 
 ClassImp(FChannelData)
 

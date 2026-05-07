@@ -1,6 +1,5 @@
 #include <chrono>
 #include <cmath>
-#include <cstdint>
 #include <iostream>
 #include <random>
 #include <vector>
@@ -8,8 +7,8 @@
 #include "TFile.h"
 #include "TTree.h"
 
-#include "RawObjs/FChannel.hh"
-#include "RawObjs/FChannelData.hh"
+#include "FChannel.hh"
+#include "FChannelData.hh"
 
 int main(int argc, char ** argv)
 {
@@ -70,7 +69,6 @@ int main(int argc, char ** argv)
     DT += dt;
   }
 
-  // 쓰기 및 파일 닫기
   tree.Write();
   file->Close();
   delete file;

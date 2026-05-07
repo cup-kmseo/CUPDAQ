@@ -1,4 +1,4 @@
-#include "DAQ/CupDAQManager.hh"
+#include "CupDAQManager.hh"
 
 void CupDAQManager::WriteFADC_MOD_GZIP() {}
 void CupDAQManager::WriteSADC_MOD_GZIP() {}

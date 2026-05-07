@@ -1,8 +1,8 @@
 #include <limits>
 
-#include "OnlObjs/BuiltEvent.hh"
-#include "OnlObjs/FADCRawEvent.hh"
-#include "OnlObjs/SADCRawEvent.hh"
+#include "BuiltEvent.hh"
+#include "FADCRawEvent.hh"
+#include "SADCRawEvent.hh"
 
 ClassImp(BuiltEvent)
 
@@ -14,34 +14,37 @@ BuiltEvent::BuiltEvent()
 }
 
 BuiltEvent::BuiltEvent(const BuiltEvent & builtevent)
-  : TObjArray(builtevent),
+  : TObjArray(),
     fDAQID(builtevent.GetDAQID()),
     fEventNumber(builtevent.GetEventNumber())
 {
-  const int nent = builtevent.GetEntries();
+  const int nent = builtevent.GetLast() + 1;
   for (int i = 0; i < nent; ++i) {
     auto * event = static_cast<AbsADCRaw *>(builtevent.At(i));
     if (!event) continue;
 
+    AbsADCRaw * newadc = nullptr;
     switch (event->GetADCMode()) {
       case ADC::FMODE: {
-        auto * adc = static_cast<FADCRawEvent *>(event);
-        auto * newadc = new FADCRawEvent(*adc);
-        Add(newadc);
+        newadc = new FADCRawEvent(*static_cast<FADCRawEvent *>(event));
         break;
       }
       case ADC::SMODE: {
-        auto * adc = static_cast<SADCRawEvent *>(event);
-        auto * newadc = new SADCRawEvent(*adc);
-        Add(newadc);
+        newadc = new SADCRawEvent(*static_cast<SADCRawEvent *>(event));
         break;
       }
       default: break;
     }
+
+    if (newadc) { AddAt(newadc, i); }
   }
 }
 
-BuiltEvent::~BuiltEvent() { Delete(); }
+BuiltEvent::~BuiltEvent()
+{
+  this->SetOwner(kTRUE);
+  this->Delete();
+}
 
 unsigned int BuiltEvent::GetTriggerType() const
 {
@@ -75,6 +78,23 @@ unsigned long BuiltEvent::GetTriggerTime() const
   }
 
   return fastttime;
+}
+
+int BuiltEvent::GetSize() const
+{
+  // ROOT serialized size estimate:
+  // - TObjArray base (framing + internal array info): ~40 bytes
+  // - BuiltEvent class framing: version(2) + bytecount(4) = 6 bytes
+  // - BuiltEvent own fields: fDAQID(4) + fEventNumber(4) = 8 bytes
+  // - Each contained AbsADCRaw object (FADCRawEvent or SADCRawEvent)
+  constexpr int kBase = 40 + 6 + 8;
+  int size = kBase;
+  const int n = GetLast() + 1;
+  for (int i = 0; i < n; i++) {
+    auto * obj = static_cast<AbsADCRaw *>(At(i));
+    if (obj) { size += obj->GetSize(); }
+  }
+  return size;
 }
 
 int BuiltEvent::Compare(const TObject * object) const

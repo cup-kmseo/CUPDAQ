@@ -3,16 +3,18 @@
 
 #include "TBranchRef.h"
 
-#include "DAQ/CupDAQManager.hh"
-#include "OnlObjs/ADCHeader.hh"
-#include "OnlObjs/FADCRawChannel.hh"
-#include "OnlObjs/FADCRawEvent.hh"
-#include "OnlObjs/SADCRawEvent.hh"
-#include "RawObjs/AChannel.hh"
-#include "RawObjs/AChannelData.hh"
-#include "RawObjs/EventInfo.hh"
-#include "RawObjs/FChannel.hh"
-#include "RawObjs/FChannelData.hh"
+#include "CupDAQManager.hh"
+#include "ELog.hh"
+#include "adcconsts.hh"
+#include "ADCHeader.hh"
+#include "FADCRawChannel.hh"
+#include "FADCRawEvent.hh"
+#include "SADCRawEvent.hh"
+#include "AChannel.hh"
+#include "AChannelData.hh"
+#include "EventInfo.hh"
+#include "FChannel.hh"
+#include "FChannelData.hh"
 
 void CupDAQManager::WriteFADC_MOD_ROOT()
 {
@@ -25,41 +27,55 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
   double perror = 0;
   double integral = 0;
 
-  int nadcch = 4;
+  int nadcch = 0;
   ADC::TYPE adctype = static_cast<ADC::TYPE>(static_cast<int>(fADCType) % 10);
   switch (adctype) {
-    case ADC::FADC: nadcch = 4; break;
-    case ADC::GADC: nadcch = 16; break;
-    case ADC::MADC: nadcch = 4; break;
-    case ADC::IADC: nadcch = 40; break;
+    case ADC::FADC: nadcch = kNCHFADC; break;
+    case ADC::GADC: nadcch = kNCHGADC; break;
+    case ADC::MADC: nadcch = kNCHMADC; break;
+    case ADC::IADC: nadcch = kNCHIADC; break;
     default: break;
+  }
+
+  if (nadcch == 0) {
+    ERROR("invalid adc type");
+    RUNSTATE::SetError(fRunStatus);
+    return;
   }
 
   std::unique_lock<std::mutex> wlock(fWriteFileMutex, std::defer_lock);
 
-  fWriteStatus = RUNNING;
+  fWriteStatus.store(RUNNING);
+
   while (true) {
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
+    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) { break; }
+
     if (fBuiltEventBuffer1.empty()) {
-      if (fBuildStatus == ENDED || fMergeStatus == ENDED) break;
+      if (fBuildStatus.load() == ENDED) { break; }
     }
     else {
       StartBenchmark("WriteEvent");
+
       chdata->Clear();
 
       auto bevent_opt = fBuiltEventBuffer1.pop_front();
       if (!bevent_opt.has_value()) {
-        int size_empty = fBuiltEventBuffer1.size();
+        int size_empty = static_cast<int>(fBuiltEventBuffer1.size());
         ThreadSleep(fWriteSleep, perror, integral, size_empty);
         continue;
       }
-      std::unique_ptr<BuiltEvent> bevent = std::move(bevent_opt.value());
-      BuiltEvent * ev = bevent.get();
+
+      std::shared_ptr<BuiltEvent> bevent_ptr = bevent_opt.value();
+      BuiltEvent * ev = bevent_ptr.get();
 
       eventinfo->SetTriggerNumber(ev->GetTriggerNumber());
       eventinfo->SetTriggerTime(ev->GetTriggerTime());
       eventinfo->SetTriggerType(ev->GetTriggerType());
-      eventinfo->SetEventNumber(fNBuiltEvent);
+
+      {
+        std::lock_guard<std::mutex> lock(fMonitorMutex);
+        eventinfo->SetEventNumber(fNBuiltEvent);
+      }
 
       int nadc = ev->GetEntries();
       for (int j = 0; j < nadc; j++) {
@@ -74,8 +90,7 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
         }
 
         for (int i = 0; i < nadcch; i++) {
-          if (header->GetZero(i)) continue;
-
+          if (header->GetZero(i)) { continue; }
           FChannel * channel = chdata->Add(conf->PID(i), adcraw->GetNDP());
           channel->SetPedestal(header->GetPedestal(i));
           auto * rawchannel = adcraw->GetChannel(i);
@@ -91,7 +106,7 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
       StopBenchmark("WriteEvent");
     }
 
-    int size = fBuiltEventBuffer1.size();
+    int size = static_cast<int>(fBuiltEventBuffer1.size());
     ThreadSleep(fWriteSleep, perror, integral, size);
   }
 }
@@ -117,29 +132,37 @@ void CupDAQManager::WriteSADC_MOD_ROOT()
 
   std::unique_lock<std::mutex> wlock(fWriteFileMutex, std::defer_lock);
 
-  fWriteStatus = RUNNING;
+  fWriteStatus.store(RUNNING);
+
   while (true) {
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
+    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) { break; }
+
     if (fBuiltEventBuffer1.empty()) {
-      if (fBuildStatus == ENDED || fMergeStatus == ENDED) break;
+      if (fBuildStatus.load() == ENDED) { break; }
     }
     else {
       StartBenchmark("WriteEvent");
+
       chdata->Clear();
 
       auto bevent_opt = fBuiltEventBuffer1.pop_front();
       if (!bevent_opt.has_value()) {
-        int size_empty = fBuiltEventBuffer1.size();
+        int size_empty = static_cast<int>(fBuiltEventBuffer1.size());
         ThreadSleep(fWriteSleep, perror, integral, size_empty);
         continue;
       }
-      std::unique_ptr<BuiltEvent> bevent = std::move(bevent_opt.value());
-      BuiltEvent * ev = bevent.get();
+
+      std::shared_ptr<BuiltEvent> bevent_ptr = bevent_opt.value();
+      BuiltEvent * ev = bevent_ptr.get();
 
       eventinfo->SetTriggerNumber(ev->GetTriggerNumber());
       eventinfo->SetTriggerTime(ev->GetTriggerTime());
       eventinfo->SetTriggerType(ev->GetTriggerType());
-      eventinfo->SetEventNumber(fNBuiltEvent);
+
+      {
+        std::lock_guard<std::mutex> lock(fMonitorMutex);
+        eventinfo->SetEventNumber(fNBuiltEvent);
+      }
 
       int nadc = ev->GetEntries();
       for (int j = 0; j < nadc; j++) {
@@ -154,8 +177,7 @@ void CupDAQManager::WriteSADC_MOD_ROOT()
         }
 
         for (int i = 0; i < nadcch; i++) {
-          if (header->GetZero(i)) continue;
-
+          if (header->GetZero(i)) { continue; }
           AChannel * channel = chdata->Add(conf->PID(i));
           channel->SetBit(header->GetTriggerBit(i));
           channel->SetADC(adcraw->GetADC(i));
@@ -166,11 +188,11 @@ void CupDAQManager::WriteSADC_MOD_ROOT()
       wlock.lock();
       fROOTTree->Fill();
       wlock.unlock();
-      
+
       StopBenchmark("WriteEvent");
     }
 
-    int size = fBuiltEventBuffer1.size();
+    int size = static_cast<int>(fBuiltEventBuffer1.size());
     ThreadSleep(fWriteSleep, perror, integral, size);
   }
 }

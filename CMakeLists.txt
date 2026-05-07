@@ -4,6 +4,11 @@
 cmake_minimum_required ( VERSION 3.16 )
 project ( CUPDAQ VERSION 1.0.0 LANGUAGES CXX )
 
+# ---- Compilation Database ----
+# Generates compile_commands.json in the build directory,
+# helping IDEs and analysis tools (like clangd/Antigravity) resolve includes.
+set ( CMAKE_EXPORT_COMPILE_COMMANDS ON )
+
 # ---- C++ Standard ----
 set ( CMAKE_CXX_STANDARD 17 )
 set ( CMAKE_CXX_STANDARD_REQUIRED ON )
@@ -11,6 +16,12 @@ set ( CMAKE_CXX_EXTENSIONS OFF )
 
 # Use standard GNU installation directories
 include ( GNUInstallDirs )
+
+# ---- Build-tree header staging area ----
+# All module headers are staged here so rootcling can resolve cross-module includes.
+# Mirrors what ROOT does with HEADER_OUTPUT_PATH = CMAKE_BINARY_DIR/include.
+set ( CUPDAQ_HEADER_OUTPUT_PATH ${CMAKE_BINARY_DIR}/include )
+file ( MAKE_DIRECTORY ${CUPDAQ_HEADER_OUTPUT_PATH} )
 
 # ---- Relocatable RPATH Settings (Linux) ----
 # This ensures that installed binaries look for libraries relative to their own location.
@@ -23,7 +34,7 @@ set ( CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE )
 set ( CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}" )
 
 # ---- ROOT ----
-find_package ( ROOT REQUIRED COMPONENTS Core RIO )
+find_package ( ROOT REQUIRED COMPONENTS Core RIO RHTTP )
 include ( ${ROOT_USE_FILE} )
 
 # Prevent absolute paths from being hardcoded in ROOT dictionaries

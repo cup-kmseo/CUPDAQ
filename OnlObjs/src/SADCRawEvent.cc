@@ -1,8 +1,8 @@
 #include <cstring>
 
-#include "DAQConfig/IADCTConf.hh"
-#include "DAQConfig/SADCTConf.hh"
-#include "OnlObjs/SADCRawEvent.hh"
+#include "IADCTConf.hh"
+#include "SADCTConf.hh"
+#include "SADCRawEvent.hh"
 
 ClassImp(SADCRawEvent)
 
@@ -57,6 +57,18 @@ SADCRawEvent::~SADCRawEvent()
 {
   delete[] fADC;
   delete[] fTime;
+}
+
+int SADCRawEvent::GetSize() const
+{
+  // AbsADCRaw base serialized size (TObject + ADCHeader + AbsADCRaw fields).
+  int size = AbsADCRaw::GetSize();
+
+  // SADCRawEvent class framing: version(2) + bytecount(4) = 6 bytes.
+  // Own fields: fNCH(4) + fADC[fNCH](4*fNCH) + fTime[fNCH](4*fNCH).
+  size += 6 + 4 + fNCH * 4 + fNCH * 4;
+
+  return size;
 }
 
 void SADCRawEvent::Unpack(AbsConf * config, int verbose)

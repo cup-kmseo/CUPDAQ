@@ -1,6 +1,6 @@
 #include "TH1D.h"
 
-#include "RawObjs/FChannel.hh"
+#include "FChannel.hh"
 
 ClassImp(FChannel)
 

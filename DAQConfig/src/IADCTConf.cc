@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "DAQConfig/IADCTConf.hh"
+#include "IADCTConf.hh"
 
 ClassImp(IADCTConf)
 

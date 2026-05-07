@@ -3,11 +3,9 @@
 #include <memory>
 #include <thread>
 
-#include "DAQConfig/GADCSConf.hh"
-#include "DAQSystem/CupGADCS.hh"
-#include "DAQUtils/ELog.hh"
-
-ClassImp(CupGADCS)
+#include "GADCSConf.hh"
+#include "CupGADCS.hh"
+#include "ELog.hh"
 
 CupGADCS::CupGADCS(int sid)
   : AbsADC(sid)

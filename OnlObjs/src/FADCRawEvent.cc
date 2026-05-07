@@ -1,9 +1,9 @@
-#include "DAQConfig/FADCTConf.hh"
-#include "DAQConfig/IADCTConf.hh"
-#include "DAQConfig/MADCSConf.hh"
-#include "DAQConfig/GADCSConf.hh"
-#include "OnlObjs/FADCRawChannel.hh"
-#include "OnlObjs/FADCRawEvent.hh"
+#include "FADCTConf.hh"
+#include "IADCTConf.hh"
+#include "MADCSConf.hh"
+#include "GADCSConf.hh"
+#include "FADCRawChannel.hh"
+#include "FADCRawEvent.hh"
 
 ClassImp(FADCRawEvent)
 
@@ -54,6 +54,20 @@ FADCRawEvent::~FADCRawEvent()
       delete fChannel[i];
     delete[] fChannel;
   }
+}
+int FADCRawEvent::GetSize() const
+{
+  // AbsADCRaw base serialized size (TObject + ADCHeader + AbsADCRaw fields).
+  int size = AbsADCRaw::GetSize();
+
+  // FADCRawEvent class framing: version(2) + bytecount(4) = 6 bytes.
+  // Own fields: fNCH(4) + fNDP(4).
+  size += 6 + 4 + 4;
+
+  // Each FADCRawChannel: framing(6) + fNDP(4) + fADC[fNDP](2*fNDP).
+  size += fNCH * (6 + 4 + fNDP * 2);
+
+  return size;
 }
 
 void FADCRawEvent::Unpack(AbsConf * config, int verbose)

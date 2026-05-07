@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "DAQConfig/SADCTConf.hh"
+#include "SADCTConf.hh"
 
 ClassImp(SADCTConf)
 

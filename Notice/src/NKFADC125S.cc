@@ -7,8 +7,8 @@
 #include <unistd.h>
 #include <vector>
 
-#include "DAQUtils/ELog.hh"
-#include "Notice/NKFADC125S.hh"
+#include "ELog.hh"
+#include "NKFADC125S.hh"
 
 namespace {
 

@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "DAQUtils/ELog.hh"
-#include "Notice/NKMiniTCB.hh"
+#include "ELog.hh"
+#include "NKMiniTCB.hh"
 
 int main(int argc, char ** argv)
 {

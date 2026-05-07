@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "DAQConfig/DAQConf.hh"
+#include "DAQConf.hh"
 
 ClassImp(DAQConf)
 

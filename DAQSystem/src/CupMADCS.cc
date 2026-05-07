@@ -3,11 +3,9 @@
 #include <memory>
 #include <thread>
 
-#include "DAQConfig/MADCSConf.hh"
-#include "DAQSystem/CupMADCS.hh"
-#include "DAQUtils/ELog.hh"
-
-ClassImp(CupMADCS)
+#include "MADCSConf.hh"
+#include "CupMADCS.hh"
+#include "ELog.hh"
 
 CupMADCS::CupMADCS(int sid)
   : AbsADC(sid)

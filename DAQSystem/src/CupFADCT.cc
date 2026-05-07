@@ -1,8 +1,6 @@
-#include "DAQConfig/FADCTConf.hh"
-#include "DAQSystem/CupFADCT.hh"
-#include "DAQUtils/ELog.hh"
-
-ClassImp(CupFADCT)
+#include "FADCTConf.hh"
+#include "CupFADCT.hh"
+#include "ELog.hh"
 
 CupFADCT::CupFADCT(int sid)
   : AbsADC(sid)

@@ -1,11 +1,14 @@
-/.lh/
-/.vscode/
-/build/
-/test/
-/bin/
-/include/
-/lib/
-/install/
+/.lh
+/.vscode
+/build
+/test
+/bin
+/include
+/lib
+/lib64
+/install
+/.cache
+/.clangd
 /.clang-format
 /ld.sh
 /*.C
@@ -15,3 +18,4 @@
 /*.yaml
 /*.root*
 /*.h5*
+/*.sh

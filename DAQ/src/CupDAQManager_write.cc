@@ -4,29 +4,26 @@
 #include <mutex>
 #include <string>
 
-#include "DAQ/CupDAQManager.hh"
+#include "CupDAQManager.hh"
+#include "ELog.hh"
 
-// =====================================================================
-// Core Write Event Logic
-// =====================================================================
 void CupDAQManager::TF_WriteEvent()
 {
-  fWriteStatus = READY;
+  fWriteStatus.store(READY);
 
-  if (!ThreadWait(fRunStatus, fDoExit)) {
+  if (!WaitRunState(fRunStatus, RUNSTATE::kRUNNING, fDoExit)) {
     WARNING("exited by exit command");
     return;
   }
 
   const char * adcmode = (fADCMode == ADC::SMODE) ? "SADC mode" : "FADC mode";
-  INFO("writing output data started as %s", adcmode);
+  INFO("started as %s", adcmode);
 
   if (!OpenNewOutputFile()) {
     RUNSTATE::SetError(fRunStatus);
     return;
   }
 
-  // Delegate writing based on ADC mode and file format
   if (fADCMode == ADC::SMODE) {
     switch (fOutputFileFormat) {
       case OUTPUT::ROOT: WriteSADC_MOD_ROOT(); break;
@@ -44,26 +41,33 @@ void CupDAQManager::TF_WriteEvent()
     }
   }
 
-  // Close ROOT file safely
-  if (fROOTFile && fROOTFile->IsOpen()) {
-    fROOTFile->cd();
-    fROOTTree->Write();
-    fTotalWrittenDataSize += fROOTFile->GetEND();
-    std::string fname = fROOTFile->GetName();
-    fROOTFile->Close();
-    INFO("output data %s closed", fname.c_str());
+  {
+    std::lock_guard<std::mutex> lock(fWriteFileMutex);
+    if (fROOTFile && fROOTFile->IsOpen()) {
+      fROOTFile->cd();
+      fROOTTree->Write();
+
+      fTotalWrittenDataSize += fROOTFile->GetEND();
+      std::string fname = fROOTFile->GetName();
+
+      fROOTFile->Close();
+      INFO("output data %s closed", fname.c_str());
+    }
   }
 
-  // Close HDF5 file using the clean helper function (No #ifdef clutter here!)
   CloseHDF5Output();
 
-  fWriteStatus = ENDED;
-  INFO("writing output data ended");
+  fWriteStatus.store(ENDED);
+
+  // build already ended, clear fBuiltEventBuffer1
+  if (!fBuiltEventBuffer1.empty()) {
+    INFO("fBuiltEventBuffer1 is not empty, clearing");
+    fBuiltEventBuffer1.clear();
+  }
+
+  INFO("ended");
 }
 
-// =====================================================================
-// Output File Creation (Zero ROOT dependency for strings & paths)
-// =====================================================================
 bool CupDAQManager::OpenNewOutputFile()
 {
   int nfile = fOutputFileList.size();
@@ -166,24 +170,29 @@ bool CupDAQManager::OpenNewOutputFile()
   return true;
 }
 
-// =====================================================================
-// HDF5 File Closing Helpers (Separated for Cleanliness)
-// =====================================================================
 #ifdef ENABLE_HDF5
 
 void CupDAQManager::CloseHDF5Output()
 {
-  if (fHDF5File && fHDF5File->IsOpen()) {
-    fTotalWrittenDataSize += fHDF5File->GetFileSize();
-    const char * fname = fHDF5File->GetFilename();
-    fHDF5File->Close();
-    INFO("output data %s closed", fname);
+  if (fHDF5File) {
+    if (fHDF5File->IsOpen()) {
+      fTotalWrittenDataSize += fHDF5File->GetFileSize();
+      const char * fname = fHDF5File->GetFilename();
+      fHDF5File->Close();
+      INFO("output data %s closed", fname);
+    }
+    delete fHDF5File;
+    fHDF5File = nullptr;
+  }
+
+  if (fH5Event) {
+    delete fH5Event;
+    fH5Event = nullptr;
   }
 }
 
 #else
 
-// Stub function when HDF5 is disabled
 void CupDAQManager::CloseHDF5Output()
 {
   // Do nothing

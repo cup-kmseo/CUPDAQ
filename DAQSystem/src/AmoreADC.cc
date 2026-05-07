@@ -1,6 +1,4 @@
-#include "DAQSystem/AmoreADC.hh"
-
-ClassImp(AmoreADC)
+#include "AmoreADC.hh"
 
 AmoreADC::AmoreADC()
   : AbsADC(),

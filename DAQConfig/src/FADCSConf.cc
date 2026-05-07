@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "DAQConfig/FADCSConf.hh"
+#include "FADCSConf.hh"
 
 ClassImp(FADCSConf)
 
