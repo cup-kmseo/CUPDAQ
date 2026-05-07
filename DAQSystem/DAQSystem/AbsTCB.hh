@@ -1,16 +1,15 @@
 #pragma once
 
-#include "TObject.h"
 
 #include "DAQConfig/FADCTConf.hh"
 #include "DAQConfig/IADCTConf.hh"
 #include "DAQConfig/SADCTConf.hh"
 #include "DAQConfig/TCBConf.hh"
 
-class AbsTCB : public TObject {
+class AbsTCB {
 public:
   AbsTCB() = default;
-  ~AbsTCB() override = default;
+  virtual ~AbsTCB() = default;
 
   virtual int Open() = 0;
   virtual void Close() = 0;
@@ -134,5 +133,4 @@ public:
   virtual void MeasurePedestalIADC(IADCTConf * conf);
 
 protected:
-  ClassDef(AbsTCB, 0)
 };

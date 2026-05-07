@@ -4,7 +4,6 @@
 #include <memory>
 #include <mutex>
 
-#include "TObject.h"
 
 #include "DAQConfig/AbsConf.hh"
 #include "DAQUtils/ConcurrentDeque.hh"
@@ -24,12 +23,12 @@ public:
   unsigned char * data;
 };
 
-class AbsADC : public TObject {
+class AbsADC {
 public:
   AbsADC();
   AbsADC(int sid);
   AbsADC(AbsConf * config);
-  ~AbsADC() = default;
+  virtual ~AbsADC() = default;
 
   virtual void SetSID(int sid);
   virtual void SetMID(int mid);
@@ -52,8 +51,7 @@ public:
   virtual void StartTrigger() = 0;
   virtual void StopTrigger() = 0;
 
-  virtual bool IsSortable() const;
-  virtual int Compare(const TObject * object) const;
+
   virtual unsigned long GetTotalBCount() const;
   virtual unsigned long GetCurrentTime();
   virtual unsigned long GetCurrentTrgNumber();
@@ -80,8 +78,6 @@ protected:
   std::mutex fMutex;
 
   int fEventDataSize;
-
-  ClassDef(AbsADC, 0)
 };
 
 inline void AbsADC::SetSID(int sid) { fSID = sid; }
@@ -103,7 +99,7 @@ inline int AbsADC::GetMID() const { return fMID; }
 
 inline AbsConf * AbsADC::GetConfig() const { return fConfig; }
 
-inline bool AbsADC::IsSortable() const { return true; }
+
 
 inline unsigned long AbsADC::GetTotalBCount() const { return fTotalBCount; }
 

@@ -9,7 +9,7 @@ public:
   CupSADCT() = default;
   CupSADCT(int sid);
   CupSADCT(AbsConf * conf);
-  ~CupSADCT() override = default;
+  ~CupSADCT() = default;
 
   int Open() override;
   void Close() override;
@@ -27,6 +27,4 @@ private:
   void UpdateTriggerAndTime(const unsigned char * tempdata);
 
   NKSADC64 fFADC{};
-
-  ClassDef(CupSADCT, 0)
 };

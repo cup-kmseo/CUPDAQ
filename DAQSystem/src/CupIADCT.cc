@@ -2,8 +2,6 @@
 #include "DAQSystem/CupIADCT.hh"
 #include "DAQUtils/ELog.hh"
 
-ClassImp(CupIADCT)
-
 CupIADCT::CupIADCT(int sid)
   : AbsADC(sid)
 {

@@ -1,10 +1,7 @@
 #include "DAQSystem/AbsADC.hh"
 
-ClassImp(AbsADC)
-
 AbsADC::AbsADC()
-  : TObject(),
-    fSID(0),
+  : fSID(0),
     fMID(0),
     fConfig(nullptr),
     fChunkDataBuffer(),
@@ -17,8 +14,7 @@ AbsADC::AbsADC()
 }
 
 AbsADC::AbsADC(int sid)
-  : TObject(),
-    fSID(sid),
+  : fSID(sid),
     fMID(0),
     fConfig(nullptr),
     fChunkDataBuffer(),
@@ -31,8 +27,7 @@ AbsADC::AbsADC(int sid)
 }
 
 AbsADC::AbsADC(AbsConf * config)
-  : TObject(),
-    fSID(config->SID()),
+  : fSID(config->SID()),
     fMID(config->MID()),
     fConfig(config),
     fChunkDataBuffer(),
@@ -44,15 +39,6 @@ AbsADC::AbsADC(AbsConf * config)
 {
 }
 
-int AbsADC::Compare(const TObject * object) const
-{
-  auto * comp = (AbsADC *)object;
-
-  if (this->GetSID() > comp->GetSID()) return 1;
-  else if (this->GetSID() < comp->GetSID()) return -1;
-
-  return 0;
-}
 
 void AbsADC::Bclear() { fChunkDataBuffer.clear(); }
 

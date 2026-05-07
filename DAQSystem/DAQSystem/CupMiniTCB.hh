@@ -6,7 +6,7 @@
 class CupMiniTCB : public AbsTCB {
 public:
   CupMiniTCB() = default;
-  ~CupMiniTCB() override = default;
+  ~CupMiniTCB() = default;
 
   void SetIPAddress(const char * ipaddr);
 
@@ -120,8 +120,6 @@ public:
 protected:
   std::string fIPAddress{};
   NKMiniTCB fTCB{};
-
-  ClassDef(CupMiniTCB, 0)
 };
 
 inline void CupMiniTCB::SetIPAddress(const char * ipaddr) { fIPAddress = ipaddr; }

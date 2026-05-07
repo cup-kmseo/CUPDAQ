@@ -2,8 +2,6 @@
 
 #include "DAQSystem/CupTCB.hh"
 
-ClassImp(CupTCB)
-
 // Thread-safe Meyers' Singleton
 CupTCB * CupTCB::Instance()
 {

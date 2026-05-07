@@ -7,8 +7,6 @@
 #include "DAQSystem/CupGADCS.hh"
 #include "DAQUtils/ELog.hh"
 
-ClassImp(CupGADCS)
-
 CupGADCS::CupGADCS(int sid)
   : AbsADC(sid)
 {

@@ -186,10 +186,8 @@ public:
 private:
   // Private Constructor for Singleton
   CupTCB() = default;
-  ~CupTCB() override = default;
+  ~CupTCB() = default;
 
   std::mutex fMutex;
   NKTCB fNKTCB{};
-
-  ClassDef(CupTCB, 0)
 };

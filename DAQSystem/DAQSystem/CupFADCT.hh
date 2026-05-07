@@ -9,7 +9,7 @@ public:
   CupFADCT() = default;
   CupFADCT(int sid);
   CupFADCT(AbsConf * conf);
-  ~CupFADCT() override = default;
+  ~CupFADCT() = default;
 
   int Open() override;
   void Close() override;
@@ -27,6 +27,4 @@ private:
   void UpdateTriggerAndTime(const unsigned char * tempdata);
 
   NKFADC500 fFADC{};
-
-  ClassDef(CupFADCT, 0)
 };

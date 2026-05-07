@@ -9,7 +9,7 @@ public:
   CupGADCS() = default;
   CupGADCS(int sid);
   CupGADCS(AbsConf * config);
-  ~CupGADCS() override = default;
+  ~CupGADCS() = default;
 
   int Open() override;
   void Close() override;
@@ -27,6 +27,4 @@ private:
   void UpdateTriggerAndTime(const unsigned char * tempdata);
 
   NKFADC125S fFADC{};
-
-  ClassDef(CupGADCS, 0)
 };

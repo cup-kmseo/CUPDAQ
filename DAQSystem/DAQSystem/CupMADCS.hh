@@ -9,7 +9,7 @@ public:
   CupMADCS() = default;
   CupMADCS(int sid);
   CupMADCS(AbsConf * config);
-  ~CupMADCS() override = default;
+  ~CupMADCS() = default;
 
   int Open() override;
   void Close() override;
@@ -27,6 +27,4 @@ private:
   void UpdateTriggerAndTime(const unsigned char * tempdata);
 
   NKFADC125S fFADC{};
-
-  ClassDef(CupMADCS, 0)
 };

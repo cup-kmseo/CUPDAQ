@@ -9,7 +9,7 @@ public:
   AmoreADC();
   AmoreADC(int sid);
   AmoreADC(AbsConf * config);
-  ~AmoreADC() override = default;
+  ~AmoreADC() = default;
 
   int Open() override { return 0; }
   void Close() override {}
@@ -28,6 +28,4 @@ private:
 
   int fMID;
   CupTCB * fTCB;
-
-  ClassDef(AmoreADC, 0)
 };

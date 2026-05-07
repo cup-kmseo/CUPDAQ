@@ -5,8 +5,6 @@
 
 using namespace std;
 
-ClassImp(AbsTCB)
-
 void AbsTCB::WriteRegisterTCB(TCBConf * conf)
 {
   WriteTRIGENABLE(0, conf->TM());

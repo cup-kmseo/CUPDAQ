@@ -1,7 +1,5 @@
 #include "DAQSystem/CupMiniTCB.hh"
 
-ClassImp(CupMiniTCB)
-
 int CupMiniTCB::Open()
 {
   fTCB.SetIPAddress(fIPAddress.c_str());

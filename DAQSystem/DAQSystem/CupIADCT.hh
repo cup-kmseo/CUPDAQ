@@ -9,7 +9,7 @@ public:
   CupIADCT() = default;
   CupIADCT(int sid);
   CupIADCT(AbsConf * conf);
-  ~CupIADCT() override = default;
+  ~CupIADCT() = default;
 
   int Open() override;
   void Close() override;
@@ -28,6 +28,4 @@ private:
 
   int fMode{0};
   NKIADC64 fFADC{};
-
-  ClassDef(CupIADCT, 0)
 };
