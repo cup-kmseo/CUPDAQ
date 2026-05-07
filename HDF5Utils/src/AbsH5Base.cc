@@ -1,6 +1,6 @@
 #include <hdf5.h>
 
-#include "HDF5Utils/AbsH5Base.hh"
+#include "AbsH5Base.hh"
 
 void AbsH5Base::InitSubRun()
 {

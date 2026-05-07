@@ -1,18 +1,18 @@
 #ifdef ENABLE_HDF5
-#include "HDF5Utils/EDM.hh"
-#include "HDF5Utils/H5FADCEvent.hh"
-#include "HDF5Utils/H5SADCEvent.hh"
+#include "EDM.hh"
+#include "H5FADCEvent.hh"
+#include "H5SADCEvent.hh"
 #endif
 
 #include <cstdlib>
 #include <string>
 
-#include "DAQ/CupDAQManager.hh"
-#include "DAQUtils/ELog.hh"
-#include "OnlObjs/ADCHeader.hh"
-#include "OnlObjs/FADCRawChannel.hh"
-#include "OnlObjs/FADCRawEvent.hh"
-#include "OnlObjs/SADCRawEvent.hh"
+#include "CupDAQManager.hh"
+#include "ELog.hh"
+#include "ADCHeader.hh"
+#include "FADCRawChannel.hh"
+#include "FADCRawEvent.hh"
+#include "SADCRawEvent.hh"
 
 #ifdef ENABLE_HDF5
 

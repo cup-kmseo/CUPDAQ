@@ -4,8 +4,8 @@
 #include <mutex>
 #include <string>
 
-#include "DAQ/CupDAQManager.hh"
-#include "DAQUtils/ELog.hh"
+#include "CupDAQManager.hh"
+#include "ELog.hh"
 
 void CupDAQManager::TF_WriteEvent()
 {

@@ -1,9 +1,9 @@
-#include "HDF5Utils/H5Log.hh"
+#include "H5Log.hh"
 #include <cstring>
 
 #include <hdf5.h>
 
-#include "HDF5Utils/H5FADCEvent.hh"
+#include "H5FADCEvent.hh"
 
 
 H5FADCEvent::H5FADCEvent()

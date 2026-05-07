@@ -1,0 +1,434 @@
+// CupDAQManager.hh
+#pragma once
+
+#include <atomic>
+#include <ctime>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <vector>
+#include <zmq.hpp>
+
+#include "TBenchmark.h"
+#include "TFile.h"
+#include "TTree.h"
+
+#include "CupGeneralTCB.hh"
+#include "AbsConf.hh"
+#include "AbsConfList.hh"
+#include "AbsADC.hh"
+#include "AbsSoftTrigger.hh"
+#include "ConcurrentDeque.hh"
+#include "Json.hh"
+#ifdef ENABLE_HDF5
+#include "AbsH5Event.hh"
+#include "H5DataWriter.hh"
+#endif
+#include "adcconsts.hh"
+#include "onlconsts.hh"
+#include "AbsADCRaw.hh"
+#include "BuiltEvent.hh"
+
+class CupDAQManager {
+public:
+  enum PROCSTATE
+  {
+    NONE,
+    READY,
+    RUNNING,
+    ENDED,
+    ERROR
+  };
+
+  CupDAQManager();
+  ~CupDAQManager();
+
+  virtual void SetRunNumber(int run);
+  virtual void SetDAQID(int id);
+  virtual void SetDAQType(DAQ::TYPE type);
+  virtual void SetADCType(ADC::TYPE type);
+  virtual void SetTriggerMode(TRIGGER::MODE mode);
+  virtual void SetSoftTrigger(AbsSoftTrigger * trigger);
+  virtual void SetConfigFilename(const char * name);
+  virtual void SetMinimumBCount(int val);
+
+  virtual void UseEventMerger();
+
+  virtual void AddADC(std::unique_ptr<AbsADC> adc);
+  virtual bool AddADC(AbsConf * conf);
+  virtual bool AddADC(AbsConfList * conflist);
+
+  virtual AbsADC * FindADC(int sid);
+  virtual int FindADCAt(int sid);
+
+  virtual bool OpenDAQ();
+  virtual void CloseDAQ();
+  virtual bool PrepareDAQ();
+  virtual bool ConfigureDAQ();
+  virtual bool InitializeDAQ();
+  virtual void StartTrigger();
+  virtual void StopTrigger();
+
+  virtual int ReadBCount(int n);
+  virtual int ReadBCountMin(int * bcounts = nullptr);
+  virtual int ReadBCountMax(int * bcounts = nullptr);
+  virtual int ReadADCData(int n, int bcount, unsigned char * databuffer = nullptr);
+  virtual int ReadData(int bcount, unsigned char ** databuffer);
+
+  virtual void SetOutputFileFormat(OUTPUT::FORMAT format);
+  virtual void SetOutputFilename(const char * fname);
+  virtual void SetCompressionLevel(int level);
+  virtual void SetOutputSplitTime(int time);
+
+  virtual void SetVerboseLevel(int level);
+  virtual void SetTriggerMonTime(int time);
+  virtual void SetNEvent(int n);
+  virtual void SetDAQTime(int t);
+  virtual void EnableHistograming();
+
+  virtual void Run();
+
+  virtual void TF_TriggerMon();
+  virtual void TF_DebugMon();
+  virtual void TF_RunManager();
+  virtual void TF_MsgServer();
+  virtual void TF_ReadData();
+  virtual void TF_SortEvent();
+  virtual void TF_BuildEvent();
+  virtual void TF_WriteEvent();
+  virtual void TF_SplitOutput(bool ontcb);
+  virtual void TF_Histogramer();
+  virtual void TF_ShrinkToFit();
+
+  // for merging event
+  virtual void TF_DataServer();
+  virtual void TF_SendData();
+
+protected:
+  virtual bool IsStandaloneDAQ() const;
+
+  virtual int GetNADC() const;
+  virtual int GetNDP() const;
+  virtual int GetADCEventDataSize() const;
+  virtual int GetADCChannelDataSize() const;
+
+  virtual void RC_TCB();
+  virtual void RC_STDDAQ();
+  virtual void RC_TCBDAQ();
+  virtual void RC_TCBCTRLDAQ();
+  virtual void RC_MERGER();
+
+  virtual void ReadData_GLT();
+  virtual void ReadData_MOD();
+  virtual void SortEvent_MOD();
+  virtual void SortEvent_CHA();
+  virtual void BuildEvent_GLT();
+  virtual void BuildEvent_MOD();
+  virtual void BuildEvent_SLF();
+  virtual void MergeEvent();
+  virtual void WriteSADC_MOD_ROOT();
+  virtual void WriteFADC_MOD_ROOT();
+  virtual void WriteSADC_MOD_HDF5();
+  virtual void WriteFADC_MOD_HDF5();
+  virtual void WriteSADC_MOD_GZIP();
+  virtual void WriteFADC_MOD_GZIP();
+
+  virtual bool OpenNewOutputFile();
+  virtual long OpenNewROOTFile(const char * fname);
+  virtual long OpenNewHDF5File(const char * fname);
+  virtual long OpenNewGZIPFile(const char * fname);
+  virtual long SwitchRootFile(TFile *& oldfile, TFile * newfile);
+  virtual void CloseHDF5Output();
+
+  virtual void CheckEventSanity(ADCHeader ** header, unsigned int * tn, unsigned long * tt,
+                                int * status);
+  virtual void PrintDAQSummary();
+
+  virtual void ThreadSleep(int & sleep, double & perror, double & integral, int size, int tsize = 1,
+                           double ki = 0.01);
+
+  virtual nlohmann::json SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
+                                          const std::string & cmd, std::string & daq_name);
+  virtual void SendCommandToDAQs(const std::string & cmd);
+
+  virtual unsigned long QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr,
+                                       std::string & daq_name);
+  virtual bool WaitDAQStatus(RUNSTATE::STATE status);
+  virtual bool CheckDAQStatus(RUNSTATE::STATE state);
+  virtual bool CheckDAQStatus();
+
+  virtual bool WaitRunState(std::atomic<unsigned long> & state, RUNSTATE::STATE pstate,
+                            std::atomic<bool> & exit);
+  virtual int WaitCommand(std::atomic<bool> & command, std::atomic<bool> & exit,
+                          std::atomic<unsigned long> & state);
+  virtual bool IsForcedEndRunFile(bool useRC = false);
+
+  virtual const char * GetADCName(ADC::TYPE type) const;
+
+  virtual void StartBenchmark(const char * name);
+  virtual void StopBenchmark(const char * name);
+
+protected:
+  int fRunNumber;
+  std::atomic<int> fSubRunNumber;
+
+  std::unique_ptr<CupGeneralTCB> fTCB;
+  std::vector<std::unique_ptr<AbsADC>> fADCList;
+
+  int fDAQID;
+  std::string fDAQName;
+  int fDAQPort;
+
+  DAQ::TYPE fDAQType;
+  ADC::TYPE fADCType;
+  ADC::MODE fADCMode;
+  TRIGGER::MODE fTriggerMode;
+
+  std::string fConfigFilename;
+  AbsConfList * fConfigList;
+
+  zmq::context_t fZMQContext{1};
+  std::vector<std::unique_ptr<zmq::socket_t>> fDAQSocket;
+
+  int fRecordLength;
+  int fMinimumBCount;
+  int fADCEventDataSize;
+  int fADCChannelDataSize;
+  int fNDP;
+
+  bool fIsDAQOpen;
+
+  std::atomic<unsigned long> fRunStatus;
+  std::atomic<unsigned long> fErrorCode;
+  std::atomic<bool> fDoConfigRun;
+  std::atomic<bool> fDoStartRun;
+  std::atomic<bool> fDoEndRun;
+  std::atomic<bool> fDoExit;
+  std::atomic<bool> fDoSplitOutputFile;
+
+  std::atomic<unsigned long> fRunStatusTCB;
+  std::atomic<unsigned long> fErrorCodeTCB;
+  std::atomic<bool> fDoConfigRunTCB;
+  std::atomic<bool> fDoStartRunTCB;
+  std::atomic<bool> fDoEndRunTCB;
+  std::atomic<bool> fDoExitTCB;
+  std::atomic<bool> fDoSplitOutputFileTCB;
+
+  std::atomic<PROCSTATE> fReadStatus;
+  std::atomic<PROCSTATE> fSortStatus;
+  std::atomic<PROCSTATE> fBuildStatus;
+  std::atomic<PROCSTATE> fWriteStatus;
+
+  int fReadSleep;
+  int fSortSleep;
+  int fBuildSleep;
+  int fWriteSleep;
+
+  std::vector<ConcurrentDeque<std::unique_ptr<AbsADCRaw>> *> fADCRawBuffers;
+
+  using BuiltEventBuffer = ConcurrentDeque<std::shared_ptr<BuiltEvent>>;
+  BuiltEventBuffer fBuiltEventBuffer1;
+  BuiltEventBuffer fBuiltEventBuffer2;
+
+  OUTPUT::FORMAT fOutputFileFormat;
+  std::string fOutputFilename;
+  int fCompressionLevel;
+  int fOutputSplitTime;
+  std::vector<const char *> fOutputFileList;
+
+  TFile * fROOTFile;
+  TTree * fROOTTree;
+
+#ifdef ENABLE_HDF5
+  H5DataWriter * fHDF5File;
+  AbsH5Event * fH5Event;
+#endif
+
+  std::string fHistFilename;
+  bool fDoHistograming;
+  bool fHistogramerEnded;
+  int fHistSleep;
+
+  int fVerboseLevel;
+  int fTriggerMonTime;
+  int * fRemainingBCount;
+  unsigned long fCurrentTime;
+  unsigned long fTriggerTime;
+  unsigned int fTriggerNumber;
+  unsigned int fNBuiltEvent;
+  double fTotalReadDataSize;
+  double fTotalWrittenDataSize;
+
+  time_t fStartDatime;
+  time_t fEndDatime;
+
+  int fSetNEvent;
+  int fSetDAQTime;
+
+  unsigned long fMonitorServerOn;
+
+  TBenchmark * fBenchmark;
+
+  AbsSoftTrigger * fSoftTrigger;
+
+  std::mutex fMonitorMutex;
+  std::mutex fHistogramMutex;
+  std::mutex fSTDADCMutex;
+  std::mutex fWriteFileMutex;
+  std::mutex fBenchmarkMutex;
+  std::mutex fRecvBufferMutex;
+
+  bool fDoSendEvent;
+  std::map<int, std::unique_ptr<BuiltEventBuffer>> fRecvEventBuffers;
+
+  std::atomic<PROCSTATE> fSendStatus;
+  std::atomic<PROCSTATE> fRecvStatus;
+
+  int fSendSleep;
+  int fMergeSleep;
+
+  std::string fMergeServerHost;
+  int fMergeServerPort;
+  unsigned long fTotalRawDataSize;
+};
+
+inline void CupDAQManager::SetRunNumber(int run) { fRunNumber = run; }
+
+inline void CupDAQManager::SetDAQID(int id) { fDAQID = id; }
+
+inline void CupDAQManager::SetDAQType(DAQ::TYPE type) { fDAQType = type; }
+
+inline void CupDAQManager::SetADCType(ADC::TYPE type) { fADCType = type; }
+
+inline void CupDAQManager::SetTriggerMode(TRIGGER::MODE mode) { fTriggerMode = mode; }
+
+inline void CupDAQManager::SetSoftTrigger(AbsSoftTrigger * trigger) { fSoftTrigger = trigger; }
+
+inline void CupDAQManager::SetConfigFilename(const char * name) { fConfigFilename = name; }
+
+inline void CupDAQManager::SetMinimumBCount(int val) { fMinimumBCount = val; }
+
+inline void CupDAQManager::UseEventMerger() { fDoSendEvent = true; }
+
+inline void CupDAQManager::EnableHistograming() { fDoHistograming = true; }
+
+inline void CupDAQManager::SetVerboseLevel(int level) { fVerboseLevel = level; }
+
+inline void CupDAQManager::SetTriggerMonTime(int time) { fTriggerMonTime = time; }
+
+inline void CupDAQManager::SetOutputFileFormat(OUTPUT::FORMAT format)
+{
+  fOutputFileFormat = format;
+}
+
+inline void CupDAQManager::SetOutputFilename(const char * fname) { fOutputFilename = fname; }
+
+inline void CupDAQManager::SetCompressionLevel(int level) { fCompressionLevel = level; }
+
+inline void CupDAQManager::SetOutputSplitTime(int time) { fOutputSplitTime = time; }
+
+inline void CupDAQManager::SetNEvent(int n) { fSetNEvent = n; }
+
+inline void CupDAQManager::SetDAQTime(int t) { fSetDAQTime = t; }
+
+inline bool CupDAQManager::IsStandaloneDAQ() const
+{
+  return (fADCType == ADC::FADCS || fADCType == ADC::SADCS || fADCType == ADC::GADCS ||
+          fADCType == ADC::MADCS);
+}
+
+inline int CupDAQManager::GetNADC() const { return static_cast<int>(fADCList.size()); }
+
+inline int CupDAQManager::GetNDP() const
+{
+  int ndp = 0;
+  switch (fADCType) {
+    case ADC::SADCS: break;
+    case ADC::SADCT: break;
+    case ADC::FADCS: ndp = 64 * fRecordLength - 16; break;
+    case ADC::FADCT: ndp = 64 * fRecordLength - 16; break;
+    case ADC::GADCS: ndp = 16 * fRecordLength - 2; break;
+    case ADC::GADCT: ndp = 16 * fRecordLength - 2; break;
+    case ADC::MADCS: ndp = 16 * fRecordLength - 16; break;
+    case ADC::IADCT: {
+      if (fRecordLength > 0) { ndp = 8 * fRecordLength - 2; }
+      else {
+        ndp = 0;
+      }
+      break;
+    }
+    default: break;
+  }
+
+  return ndp;
+}
+
+inline int CupDAQManager::GetADCEventDataSize() const
+{
+  int dataSize = 0;
+
+  switch (fADCType) {
+    case ADC::SADCS: dataSize = kBYTESPEREVENTSADC; break;
+    case ADC::SADCT: dataSize = kBYTESPEREVENTSADC; break;
+    case ADC::FADCS: dataSize = kNCHFADC * 128 * fRecordLength; break;
+    case ADC::FADCT: dataSize = kNCHFADC * 128 * fRecordLength; break;
+    case ADC::GADCS: dataSize = kNCHGADC * 32 * fRecordLength; break;
+    case ADC::GADCT: dataSize = kNCHGADC * 32 * fRecordLength; break;
+    case ADC::MADCS: dataSize = kNCHMADC * 32 * fRecordLength; break;
+    case ADC::IADCT: {
+      if (fRecordLength > 0) { dataSize = 512 * fRecordLength; }
+      else {
+        dataSize = kBYTESPEREVENTIADC;
+      }
+      break;
+    }
+    default: break;
+  }
+
+  return dataSize;
+}
+
+inline int CupDAQManager::GetADCChannelDataSize() const
+{
+  int dataSize = 0;
+
+  switch (fADCType) {
+    case ADC::SADCS: dataSize = 0; break;
+    case ADC::SADCT: dataSize = 0; break;
+    case ADC::FADCS: dataSize = 128 * fRecordLength; break;
+    case ADC::FADCT: dataSize = 128 * fRecordLength; break;
+    case ADC::GADCS: dataSize = 32 * fRecordLength; break;
+    case ADC::GADCT: dataSize = 32 * fRecordLength; break;
+    case ADC::MADCS: dataSize = 32 * fRecordLength; break;
+    case ADC::IADCT: {
+      if (fRecordLength > 0) { dataSize = 128 * fRecordLength; }
+      else {
+        dataSize = 0;
+      }
+      break;
+    }
+    default: break;
+  }
+
+  return dataSize;
+}
+
+inline const char * CupDAQManager::GetADCName(ADC::TYPE type) const
+{
+  switch (type) {
+    case ADC::SADCS:
+    case ADC::SADCT: return "SADC";
+
+    case ADC::FADCS:
+    case ADC::FADCT: return "FADC";
+
+    case ADC::GADCS:
+    case ADC::GADCT: return "GADC";
+
+    case ADC::IADCT: return "IADC";
+    case ADC::MADCS: return "MADC";
+
+    default: return "Unknown";
+  }
+}

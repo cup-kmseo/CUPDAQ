@@ -1,5 +1,5 @@
-#include "RawObjs/AChannel.hh"
-#include "RawObjs/AChannelData.hh"
+#include "AChannel.hh"
+#include "AChannelData.hh"
 
 ClassImp(AChannelData)
 

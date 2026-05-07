@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "DAQConfig/TCBConf.hh"
+#include "TCBConf.hh"
 
 ClassImp(TCBConf)
 

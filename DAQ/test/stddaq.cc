@@ -1,7 +1,7 @@
 #include "TROOT.h"
 
-#include "DAQ/CupDAQManager.hh"
-#include "DAQ/daqopt.hh"
+#include "CupDAQManager.hh"
+#include "daqopt.hh"
 
 int main(int argc, char ** argv)
 {

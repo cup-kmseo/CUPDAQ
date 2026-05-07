@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "DAQConfig/GADCSConf.hh"
+#include "GADCSConf.hh"
 
 ClassImp(GADCSConf)
 

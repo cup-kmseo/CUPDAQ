@@ -2,7 +2,7 @@
 
 #include "TSystem.h"
 
-#include "DAQ/daqopt.hh"
+#include "daqopt.hh"
 
 using namespace std;
 

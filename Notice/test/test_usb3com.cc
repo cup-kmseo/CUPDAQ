@@ -1,8 +1,8 @@
 #include <cstdint>
 #include <string>
 
-#include "DAQUtils/ELog.hh"
-#include "Notice/USB3Com.hh"
+#include "ELog.hh"
+#include "USB3Com.hh"
 
 int main(int argc, char ** argv)
 {

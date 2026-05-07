@@ -7,8 +7,8 @@
 #include "TFile.h"
 #include "TTree.h"
 
-#include "RawObjs/FChannel.hh"
-#include "RawObjs/FChannelData.hh"
+#include "FChannel.hh"
+#include "FChannelData.hh"
 
 int main(int argc, char ** argv)
 {

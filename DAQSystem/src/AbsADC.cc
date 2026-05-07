@@ -1,4 +1,4 @@
-#include "DAQSystem/AbsADC.hh"
+#include "AbsADC.hh"
 
 AbsADC::AbsADC()
   : fSID(0),

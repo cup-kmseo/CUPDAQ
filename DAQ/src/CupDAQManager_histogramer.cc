@@ -6,11 +6,11 @@
 #include <random>
 #include <string>
 
-#include "DAQ/CupDAQManager.hh"
-#include "DAQUtils/ELog.hh"
-#include "OnlHistogramer/AbsHistogramer.hh"
-#include "OnlHistogramer/FADCHistogramer.hh"
-#include "OnlHistogramer/SADCHistogramer.hh"
+#include "CupDAQManager.hh"
+#include "ELog.hh"
+#include "AbsHistogramer.hh"
+#include "FADCHistogramer.hh"
+#include "SADCHistogramer.hh"
 
 void CupDAQManager::TF_Histogramer()
 {

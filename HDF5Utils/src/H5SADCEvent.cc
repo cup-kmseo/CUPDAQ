@@ -1,8 +1,8 @@
-#include "HDF5Utils/H5Log.hh"
+#include "H5Log.hh"
 
 #include <hdf5.h>
 
-#include "HDF5Utils/H5SADCEvent.hh"
+#include "H5SADCEvent.hh"
 
 
 H5SADCEvent::H5SADCEvent()

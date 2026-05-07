@@ -2,8 +2,8 @@
 
 // Removed TBranch/TTree includes
 
-#include "DAQUtils/ELog.hh"
-#include "OnlHistogramer/AbsHistogramer.hh"
+#include "ELog.hh"
+#include "AbsHistogramer.hh"
 
 AbsHistogramer::AbsHistogramer() { fHistProxy = new HistProxy(); }
 

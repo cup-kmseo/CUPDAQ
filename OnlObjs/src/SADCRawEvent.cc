@@ -1,8 +1,8 @@
 #include <cstring>
 
-#include "DAQConfig/IADCTConf.hh"
-#include "DAQConfig/SADCTConf.hh"
-#include "OnlObjs/SADCRawEvent.hh"
+#include "IADCTConf.hh"
+#include "SADCTConf.hh"
+#include "SADCRawEvent.hh"
 
 ClassImp(SADCRawEvent)
 

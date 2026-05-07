@@ -1,6 +1,6 @@
 #include <yaml-cpp/yaml.h>
 
-#include "DAQTrigger/PSMDTrigger.hh"
+#include "PSMDTrigger.hh"
 
 PSMDTrigger::PSMDTrigger()
   : AbsSoftTrigger("PSMDTrigger")

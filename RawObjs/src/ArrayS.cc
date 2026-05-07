@@ -17,7 +17,7 @@ Array of shorts (16 bits per element).
 #include <iostream>
 
 #include "TBuffer.h"
-#include "RawObjs/ArrayS.hh"
+#include "ArrayS.hh"
 
 ClassImp(ArrayS);
 

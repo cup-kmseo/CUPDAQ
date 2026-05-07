@@ -5,8 +5,8 @@
 #include <thread>
 #include <unistd.h>
 
-#include "DAQUtils/ELog.hh"
-#include "Notice/NKTCB.hh"
+#include "ELog.hh"
+#include "NKTCB.hh"
 
 namespace {
 constexpr std::uint16_t kTCB_VENDOR_ID = 0x0547;

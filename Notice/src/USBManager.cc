@@ -1,7 +1,7 @@
 #include <cstdlib>
 
-#include "DAQUtils/ELog.hh"
-#include "Notice/USBManager.hh"
+#include "ELog.hh"
+#include "USBManager.hh"
 
 namespace {
 constexpr uint8_t PVMEX_GET_ADDRESS = 0xD2;

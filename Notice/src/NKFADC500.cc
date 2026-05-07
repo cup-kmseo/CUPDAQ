@@ -1,5 +1,5 @@
-#include "DAQUtils/ELog.hh"
-#include "Notice/NKFADC500.hh"
+#include "ELog.hh"
+#include "NKFADC500.hh"
 
 namespace {
 constexpr uint16_t kVENDOR_ID = 0x0547;

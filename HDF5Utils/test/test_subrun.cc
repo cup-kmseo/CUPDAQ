@@ -4,9 +4,9 @@
 #include <string>
 #include <vector>
 
-#include "HDF5Utils/H5DataReader.hh"
-#include "HDF5Utils/H5DataWriter.hh"
-#include "HDF5Utils/H5FADCEvent.hh"
+#include "H5DataReader.hh"
+#include "H5DataWriter.hh"
+#include "H5FADCEvent.hh"
 
 // -----------------------------------------------------------------------------
 // Write function: Splits data into multiple files with incrementing subruns

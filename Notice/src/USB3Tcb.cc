@@ -2,8 +2,8 @@
 #include <cstring>
 #include <unistd.h>
 
-#include "DAQUtils/ELog.hh"
-#include "Notice/USB3Tcb.hh"
+#include "ELog.hh"
+#include "USB3Tcb.hh"
 
 namespace {
 

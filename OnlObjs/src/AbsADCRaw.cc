@@ -1,6 +1,6 @@
 #include <cstring>
 
-#include "OnlObjs/AbsADCRaw.hh"
+#include "AbsADCRaw.hh"
 
 ClassImp(AbsADCRaw)
 

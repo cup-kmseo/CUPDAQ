@@ -1,4 +1,4 @@
-#include "RawObjs/EventInfo.hh"
+#include "EventInfo.hh"
 
 ClassImp(EventInfo)
 

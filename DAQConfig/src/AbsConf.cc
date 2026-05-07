@@ -1,4 +1,4 @@
-#include "DAQConfig/AbsConf.hh"
+#include "AbsConf.hh"
 
 ClassImp(AbsConf)
 

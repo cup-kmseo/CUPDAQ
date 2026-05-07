@@ -1,6 +1,6 @@
-#include "DAQConfig/IADCTConf.hh"
-#include "DAQSystem/CupIADCT.hh"
-#include "DAQUtils/ELog.hh"
+#include "IADCTConf.hh"
+#include "CupIADCT.hh"
+#include "ELog.hh"
 
 CupIADCT::CupIADCT(int sid)
   : AbsADC(sid)

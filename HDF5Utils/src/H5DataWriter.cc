@@ -1,9 +1,9 @@
-#include "HDF5Utils/H5Log.hh"
+#include "H5Log.hh"
 #include <filesystem>
 
 #include <hdf5.h>
 
-#include "HDF5Utils/H5DataWriter.hh"
+#include "H5DataWriter.hh"
 
 
 H5DataWriter::H5DataWriter()

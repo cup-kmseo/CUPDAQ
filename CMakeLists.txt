@@ -17,6 +17,12 @@ set ( CMAKE_CXX_EXTENSIONS OFF )
 # Use standard GNU installation directories
 include ( GNUInstallDirs )
 
+# ---- Build-tree header staging area ----
+# All module headers are staged here so rootcling can resolve cross-module includes.
+# Mirrors what ROOT does with HEADER_OUTPUT_PATH = CMAKE_BINARY_DIR/include.
+set ( CUPDAQ_HEADER_OUTPUT_PATH ${CMAKE_BINARY_DIR}/include )
+file ( MAKE_DIRECTORY ${CUPDAQ_HEADER_OUTPUT_PATH} )
+
 # ---- Relocatable RPATH Settings (Linux) ----
 # This ensures that installed binaries look for libraries relative to their own location.
 set ( CMAKE_SKIP_BUILD_RPATH FALSE )

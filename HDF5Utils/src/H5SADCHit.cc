@@ -1,9 +1,9 @@
-#include "HDF5Utils/H5Log.hh"
+#include "H5Log.hh"
 #include <algorithm>
 
 #include <hdf5.h>
 
-#include "HDF5Utils/H5SADCHit.hh"
+#include "H5SADCHit.hh"
 
 
 H5SADCHit::H5SADCHit()

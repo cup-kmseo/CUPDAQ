@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "DAQSystem/AbsTCB.hh"
-#include "OnlConsts/adcconsts.hh"
+#include "AbsTCB.hh"
+#include "adcconsts.hh"
 
 using namespace std;
 

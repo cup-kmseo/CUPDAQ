@@ -1,4 +1,4 @@
-#include "DAQSystem/AmoreADC.hh"
+#include "AmoreADC.hh"
 
 AmoreADC::AmoreADC()
   : AbsADC(),

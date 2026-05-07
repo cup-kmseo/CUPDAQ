@@ -1,4 +1,4 @@
-#include "HDF5Utils/H5Log.hh"
+#include "H5Log.hh"
 #include <algorithm>
 #include <cstring> // for std::strcmp
 #include <filesystem>
@@ -8,8 +8,8 @@
 
 #include <hdf5.h>
 
-#include "HDF5Utils/AbsH5Base.hh"
-#include "HDF5Utils/H5DataReader.hh"
+#include "AbsH5Base.hh"
+#include "H5DataReader.hh"
 
 //------------------------------------------------------------------------------
 // H5ChainFile

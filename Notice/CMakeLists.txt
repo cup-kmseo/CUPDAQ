@@ -1,46 +1,44 @@
 set ( MODULE_NAME Notice )
 message ( STATUS "Configuring ${MODULE_NAME} ..." )
 
-# Use CONFIGURE_DEPENDS to track new source files automatically
-file ( GLOB MODULE_HEADERS CONFIGURE_DEPENDS ${MODULE_NAME}/*.hh )
+file ( GLOB MODULE_HEADERS CONFIGURE_DEPENDS inc/*.hh )
 file ( GLOB MODULE_SOURCES CONFIGURE_DEPENDS src/*.cc )
 
-# --- Collect include dirs for dictionary
-set ( DICT_I_FLAGS
-    -I${CMAKE_CURRENT_SOURCE_DIR} # Critical: Allows rootcling to find headers using Module/Header.hh
-    -I${PROJECT_SOURCE_DIR}/OnlConsts
-    -I${PROJECT_SOURCE_DIR}/DAQUtils
-    -I${PROJECT_SOURCE_DIR}/DAQConfig
-)
+file ( COPY ${CMAKE_CURRENT_SOURCE_DIR}/inc/
+     DESTINATION ${CUPDAQ_HEADER_OUTPUT_PATH}
+     FILES_MATCHING PATTERN "*.hh" )
+file ( COPY ${CMAKE_CURRENT_SOURCE_DIR}/inc/LinkDef.h
+     DESTINATION ${CUPDAQ_HEADER_OUTPUT_PATH}/${MODULE_NAME} )
 
-# Safely append LIBUSB include directories if they exist
+set ( DICT_I_FLAGS -I${CUPDAQ_HEADER_OUTPUT_PATH} )
 if ( LIBUSB_INCLUDE_DIRS )
     list ( APPEND DICT_I_FLAGS -I${LIBUSB_INCLUDE_DIRS} )
 endif ()
 
-# Generate ROOT dictionary
+set ( DICT_HEADERS "" )
+foreach ( _h ${MODULE_HEADERS} )
+    get_filename_component ( _n ${_h} NAME )
+    list ( APPEND DICT_HEADERS ${CUPDAQ_HEADER_OUTPUT_PATH}/${_n} )
+endforeach ()
+
 ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
-    ${MODULE_HEADERS}
-    LINKDEF ${MODULE_NAME}/LinkDef.h
+    ${DICT_HEADERS}
+    LINKDEF ${CUPDAQ_HEADER_OUTPUT_PATH}/${MODULE_NAME}/LinkDef.h
     OPTIONS ${DICT_I_FLAGS} -Wno-inconsistent-missing-override
 )
 
-# Build shared library (add dictionary source)
 add_library ( ${MODULE_NAME} SHARED
     ${MODULE_SOURCES}
     G__${MODULE_NAME}.cxx
 )
 
-# Include paths
 target_include_directories ( ${MODULE_NAME}
     PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
         ${ROOT_INCLUDE_DIRS}
 )
 
-# Modern target-based linking automatically handles build-order dependencies.
-# Therefore, add_dependencies() is no longer needed.
 target_link_libraries ( ${MODULE_NAME}
     PUBLIC
         ${ROOT_LIBRARIES}
@@ -51,17 +49,49 @@ target_link_libraries ( ${MODULE_NAME}
 
 target_compile_definitions ( ${MODULE_NAME} PUBLIC ${ROOT_DEFINITIONS} )
 
+set ( _INSTALL_HDRS "" )
+foreach ( _h ${MODULE_HEADERS} )
+    get_filename_component ( _n ${_h} NAME )
+    list ( APPEND _INSTALL_HDRS ${_n} )
+endforeach ()
+
+set ( _NOTICE_LIBUSB_I "" )
+if ( LIBUSB_INCLUDE_DIRS )
+    set ( _NOTICE_LIBUSB_I "-I${LIBUSB_INCLUDE_DIRS}" )
+endif ()
+
 # ---- Install ----
 install ( TARGETS ${MODULE_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} )
-install ( DIRECTORY ${MODULE_NAME}/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${MODULE_NAME}
+install ( DIRECTORY inc/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING PATTERN "*.hh"
 )
-install ( FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/lib${MODULE_NAME}_rdict.pcm
-    ${CMAKE_CURRENT_BINARY_DIR}/lib${MODULE_NAME}.rootmap
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    OPTIONAL
-)
+install ( CODE "
+    set ( _libdir \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\" )
+    set ( _incdir \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}\" )
+    set ( _headers \"\" )
+    foreach ( _n ${_INSTALL_HDRS} )
+        list ( APPEND _headers \"\${_incdir}/\${_n}\" )
+    endforeach ()
+    message ( STATUS \"[CUPDAQ] Regenerating PCM for ${MODULE_NAME}\" )
+    execute_process (
+        COMMAND \"${ROOT_BINDIR}/rootcling\"
+            -f \"\${_libdir}/G__${MODULE_NAME}_tmp.cxx\"
+            -s \"\${_libdir}/lib${MODULE_NAME}.so\"
+            -rml \"lib${MODULE_NAME}.so\"
+            -rmf \"\${_libdir}/lib${MODULE_NAME}.rootmap\"
+            -I\"\${_incdir}\"
+            ${_NOTICE_LIBUSB_I}
+            -Wno-inconsistent-missing-override
+            \${_headers}
+            \"${CMAKE_CURRENT_SOURCE_DIR}/inc/LinkDef.h\"
+        RESULT_VARIABLE _rc
+        ERROR_VARIABLE _err
+    )
+    file ( REMOVE \"\${_libdir}/G__${MODULE_NAME}_tmp.cxx\" )
+    if ( _rc )
+        message ( WARNING \"[CUPDAQ] PCM regeneration failed for ${MODULE_NAME}: \${_err}\" )
+    endif ()
+" )
 
 #add_subdirectory ( test )

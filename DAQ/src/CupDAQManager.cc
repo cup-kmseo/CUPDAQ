@@ -2,19 +2,19 @@
 #include <algorithm>
 #include <cstdint>
 
-#include "DAQ/CupDAQManager.hh"
-#include "DAQConfig/FADCSConf.hh"
-#include "DAQConfig/FADCTConf.hh"
-#include "DAQConfig/GADCSConf.hh"
-#include "DAQConfig/IADCTConf.hh"
-#include "DAQConfig/MADCSConf.hh"
-#include "DAQSystem/CupFADCS.hh"
-#include "DAQSystem/CupFADCT.hh"
-#include "DAQSystem/CupGADCS.hh"
-#include "DAQSystem/CupIADCT.hh"
-#include "DAQSystem/CupMADCS.hh"
-#include "DAQSystem/CupSADCT.hh"
-#include "DAQUtils/ELog.hh"
+#include "CupDAQManager.hh"
+#include "FADCSConf.hh"
+#include "FADCTConf.hh"
+#include "GADCSConf.hh"
+#include "IADCTConf.hh"
+#include "MADCSConf.hh"
+#include "CupFADCS.hh"
+#include "CupFADCT.hh"
+#include "CupGADCS.hh"
+#include "CupIADCT.hh"
+#include "CupMADCS.hh"
+#include "CupSADCT.hh"
+#include "ELog.hh"
 
 CupDAQManager::CupDAQManager()
 {

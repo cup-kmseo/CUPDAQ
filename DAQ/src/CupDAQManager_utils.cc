@@ -6,8 +6,8 @@
 
 #include "TDatime.h"
 
-#include "DAQ/CupDAQManager.hh"
-#include "DAQUtils/ELog.hh"
+#include "CupDAQManager.hh"
+#include "ELog.hh"
 
 void CupDAQManager::PrintDAQSummary()
 {

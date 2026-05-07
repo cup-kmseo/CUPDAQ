@@ -1,10 +1,10 @@
-#include "HDF5Utils/H5Log.hh"
+#include "H5Log.hh"
 #include <algorithm>
 #include <cstring>
 
 #include <hdf5.h>
 
-#include "HDF5Utils/H5FADCHit.hh"
+#include "H5FADCHit.hh"
 
 
 H5FADCHit::H5FADCHit()

@@ -1,11 +1,11 @@
 #include "TH1D.h"
 
-#include "DAQConfig/FADCTConf.hh"
-#include "DAQConfig/IADCTConf.hh"
+#include "FADCTConf.hh"
+#include "IADCTConf.hh"
 
-#include "OnlHistogramer/FADCHistogramer.hh"
-#include "OnlObjs/FADCRawChannel.hh"
-#include "OnlObjs/FADCRawEvent.hh"
+#include "FADCHistogramer.hh"
+#include "FADCRawChannel.hh"
+#include "FADCRawEvent.hh"
 
 void FADCHistogramer::Book()
 {

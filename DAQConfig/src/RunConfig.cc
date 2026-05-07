@@ -1,8 +1,8 @@
 #include <sstream>
 
-#include "DAQConfig/RunConfig.hh"
-#include "DAQConfig/TriggerLookupTable.hh"
-#include "DAQUtils/ELog.hh"
+#include "RunConfig.hh"
+#include "TriggerLookupTable.hh"
+#include "ELog.hh"
 
 RunConfig::RunConfig() { fConfigs = std::make_unique<AbsConfList>(); }
 

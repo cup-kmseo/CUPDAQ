@@ -1,10 +1,10 @@
 #include <memory>
 
-#include "DAQ/CupDAQManager.hh"
-#include "DAQConfig/IADCTConf.hh"
-#include "DAQUtils/ELog.hh"
-#include "OnlObjs/FADCRawEvent.hh"
-#include "OnlObjs/SADCRawEvent.hh"
+#include "CupDAQManager.hh"
+#include "IADCTConf.hh"
+#include "ELog.hh"
+#include "FADCRawEvent.hh"
+#include "SADCRawEvent.hh"
 
 void CupDAQManager::TF_SortEvent()
 {

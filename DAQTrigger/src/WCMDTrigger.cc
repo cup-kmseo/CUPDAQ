@@ -1,6 +1,6 @@
 #include <yaml-cpp/yaml.h>
 
-#include "DAQTrigger/WCMDTrigger.hh"
+#include "WCMDTrigger.hh"
 
 WCMDTrigger::WCMDTrigger()
   : AbsSoftTrigger("WCMDTrigger")

@@ -2,7 +2,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include "DAQConfig/TriggerLookupTable.hh"
+#include "TriggerLookupTable.hh"
 
 /**
  * @brief Helper function to print TLT result in a readable format

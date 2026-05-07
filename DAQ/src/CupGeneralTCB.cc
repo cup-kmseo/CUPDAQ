@@ -2,11 +2,11 @@
 #include <iostream>
 #include <thread>
 
-#include "DAQ/CupGeneralTCB.hh"
-#include "DAQSystem/CupMiniTCB.hh"
-#include "DAQSystem/CupTCB.hh"
-#include "DAQUtils/ELog.hh"
-#include "OnlConsts/onlconsts.hh"
+#include "CupGeneralTCB.hh"
+#include "CupMiniTCB.hh"
+#include "CupTCB.hh"
+#include "ELog.hh"
+#include "onlconsts.hh"
 
 using namespace std;
 

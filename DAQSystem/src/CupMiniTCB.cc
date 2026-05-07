@@ -1,4 +1,4 @@
-#include "DAQSystem/CupMiniTCB.hh"
+#include "CupMiniTCB.hh"
 
 int CupMiniTCB::Open()
 {

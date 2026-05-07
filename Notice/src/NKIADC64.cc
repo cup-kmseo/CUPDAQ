@@ -1,8 +1,8 @@
 #include <algorithm> // for std::min
 #include <vector>
 
-#include "DAQUtils/ELog.hh"
-#include "Notice/NKIADC64.hh"
+#include "ELog.hh"
+#include "NKIADC64.hh"
 
 namespace {
 constexpr uint16_t kVENDOR_ID = 0x0547;

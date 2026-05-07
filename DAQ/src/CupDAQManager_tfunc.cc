@@ -8,9 +8,9 @@
 #include <vector>
 #include <zmq.hpp>
 
-#include "DAQ/CupDAQManager.hh"
-#include "DAQUtils/ELog.hh"
-#include "OnlConsts/onlconsts.hh"
+#include "CupDAQManager.hh"
+#include "ELog.hh"
+#include "onlconsts.hh"
 
 void CupDAQManager::TF_RunManager()
 {

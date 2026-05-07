@@ -3,18 +3,18 @@
 
 #include "TBranchRef.h"
 
-#include "DAQ/CupDAQManager.hh"
-#include "DAQUtils/ELog.hh"
-#include "OnlConsts/adcconsts.hh"
-#include "OnlObjs/ADCHeader.hh"
-#include "OnlObjs/FADCRawChannel.hh"
-#include "OnlObjs/FADCRawEvent.hh"
-#include "OnlObjs/SADCRawEvent.hh"
-#include "RawObjs/AChannel.hh"
-#include "RawObjs/AChannelData.hh"
-#include "RawObjs/EventInfo.hh"
-#include "RawObjs/FChannel.hh"
-#include "RawObjs/FChannelData.hh"
+#include "CupDAQManager.hh"
+#include "ELog.hh"
+#include "adcconsts.hh"
+#include "ADCHeader.hh"
+#include "FADCRawChannel.hh"
+#include "FADCRawEvent.hh"
+#include "SADCRawEvent.hh"
+#include "AChannel.hh"
+#include "AChannelData.hh"
+#include "EventInfo.hh"
+#include "FChannel.hh"
+#include "FChannelData.hh"
 
 void CupDAQManager::WriteFADC_MOD_ROOT()
 {

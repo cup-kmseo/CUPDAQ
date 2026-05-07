@@ -1,6 +1,6 @@
-#include "DAQTrigger/AbsSoftTrigger.hh"
+#include "AbsSoftTrigger.hh"
 
-#include "DAQUtils/ELog.hh"
+#include "ELog.hh"
 
 AbsSoftTrigger::AbsSoftTrigger(const char * name)
   : fName(name)

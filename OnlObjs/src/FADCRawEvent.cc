@@ -1,9 +1,9 @@
-#include "DAQConfig/FADCTConf.hh"
-#include "DAQConfig/IADCTConf.hh"
-#include "DAQConfig/MADCSConf.hh"
-#include "DAQConfig/GADCSConf.hh"
-#include "OnlObjs/FADCRawChannel.hh"
-#include "OnlObjs/FADCRawEvent.hh"
+#include "FADCTConf.hh"
+#include "IADCTConf.hh"
+#include "MADCSConf.hh"
+#include "GADCSConf.hh"
+#include "FADCRawChannel.hh"
+#include "FADCRawEvent.hh"
 
 ClassImp(FADCRawEvent)
 

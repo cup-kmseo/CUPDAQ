@@ -2,9 +2,9 @@
 #include <iostream>
 #include <thread>
 
-#include "DAQConfig/FADCSConf.hh"
-#include "DAQSystem/CupFADCS.hh"
-#include "DAQUtils/ELog.hh"
+#include "FADCSConf.hh"
+#include "CupFADCS.hh"
+#include "ELog.hh"
 
 CupFADCS::CupFADCS(int sid)
   : AbsADC(sid)

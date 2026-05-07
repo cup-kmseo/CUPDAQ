@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "DAQConfig/TriggerLookupTable.hh"
+#include "TriggerLookupTable.hh"
 
 unsigned short TriggerLookupTable::GetTLT(const char * val)
 {

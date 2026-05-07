@@ -4,9 +4,9 @@
 #include <random>
 #include <vector>
 
-#include "HDF5Utils/H5DataReader.hh"
-#include "HDF5Utils/H5DataWriter.hh"
-#include "HDF5Utils/H5SADCEvent.hh"
+#include "H5DataReader.hh"
+#include "H5DataWriter.hh"
+#include "H5SADCEvent.hh"
 
 // -----------------------------------------------------------------------------
 // Write function

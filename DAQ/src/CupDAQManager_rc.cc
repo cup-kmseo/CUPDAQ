@@ -4,9 +4,9 @@
 #include "TMessage.h"
 #include "TServerSocket.h"
 
-#include "DAQ/CupDAQManager.hh"
-#include "DAQConfig/RunConfig.hh"
-#include "DAQUtils/ELog.hh"
+#include "CupDAQManager.hh"
+#include "RunConfig.hh"
+#include "ELog.hh"
 
 void CupDAQManager::Run()
 {

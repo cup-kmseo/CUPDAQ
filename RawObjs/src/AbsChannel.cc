@@ -1,4 +1,4 @@
-#include "RawObjs/AbsChannel.hh"
+#include "AbsChannel.hh"
 
 ClassImp(AbsChannel)
 

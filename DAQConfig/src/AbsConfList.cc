@@ -1,4 +1,4 @@
-#include "DAQConfig/AbsConfList.hh"
+#include "AbsConfList.hh"
 
 #include "yaml-cpp/yaml.h"
 
