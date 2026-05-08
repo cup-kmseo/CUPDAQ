@@ -55,16 +55,13 @@ find_package ( cppzmq REQUIRED )
 # Apply global optimization flags to all sub-directories
 add_compile_options ( -O2 )
 
-# ---- CUPDataModel submodule (provides RawObjs and optionally HDF5Utils) ----
-option ( CUPDAQ_ENABLE_HDF5 "Enable HDF5-based utilities" ON )
-if ( CUPDAQ_ENABLE_HDF5 )
-  set ( CUPDM_ENABLE_HDF5 ON CACHE BOOL "" FORCE )
+# ---- CUPDataModel (external package: provides RawObjs and optionally HDF5Utils) ----
+find_package ( CUPDataModel REQUIRED )
+if ( TARGET CUPDataModel::HDF5Utils )
+  set ( CUPDAQ_ENABLE_HDF5 ON CACHE BOOL "HDF5 support (derived from CUPDataModel)" FORCE )
+  add_compile_definitions ( ENABLE_HDF5 )
 else ()
-  set ( CUPDM_ENABLE_HDF5 OFF CACHE BOOL "" FORCE )
-endif ()
-add_subdirectory ( CUPDataModel )
-if ( NOT TARGET HDF5Utils )
-  set ( CUPDAQ_ENABLE_HDF5 OFF CACHE BOOL "Enable HDF5-based utilities" FORCE )
+  set ( CUPDAQ_ENABLE_HDF5 OFF CACHE BOOL "HDF5 support (derived from CUPDataModel)" FORCE )
 endif ()
 
 # ---- Submodules ----
@@ -104,3 +101,29 @@ echo \"[CUPDAQ] Environment loaded from: \$CUPDAQ_DIR\"
 
 # Install the script to the root of the installation prefix
 install ( FILES ${CMAKE_BINARY_DIR}/setup_cupdaq.sh DESTINATION . )
+
+# ---- Package Export ----
+include ( CMakePackageConfigHelpers )
+
+configure_package_config_file (
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/CUPDAQConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CUPDAQ
+)
+
+write_basic_package_version_file (
+    ${CMAKE_CURRENT_BINARY_DIR}/CUPDAQConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
+
+install ( EXPORT CUPDAQTargets
+    NAMESPACE CUPDAQ::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CUPDAQ
+)
+
+install ( FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/CUPDAQConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/CUPDAQConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CUPDAQ
+)

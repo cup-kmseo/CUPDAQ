@@ -1,7 +1,5 @@
 #include "AbsConfList.hh"
 
-#include "yaml-cpp/yaml.h"
-
 ClassImp(AbsConfList)
 
 AbsConfList::AbsConfList()

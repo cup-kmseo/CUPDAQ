@@ -27,6 +27,7 @@ target_link_libraries ( ${MODULE_NAME}
 
 # ---- Install ----
 install ( TARGETS ${MODULE_NAME}
+    EXPORT CUPDAQTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 install ( DIRECTORY inc/

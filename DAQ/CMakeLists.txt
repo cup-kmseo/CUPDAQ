@@ -31,12 +31,12 @@ target_link_libraries ( ${MODULE_NAME}
         DAQConfig
         DAQTrigger
         OnlObjs
-        RawObjs
+        CUPDataModel::RawObjs
         OnlHistogramer
 )
 
-if ( TARGET HDF5Utils )
-    target_link_libraries ( ${MODULE_NAME} PUBLIC HDF5Utils )
+if ( TARGET CUPDataModel::HDF5Utils )
+    target_link_libraries ( ${MODULE_NAME} PUBLIC CUPDataModel::HDF5Utils )
 endif ()
 
 target_compile_definitions ( ${MODULE_NAME}
@@ -46,6 +46,7 @@ target_compile_definitions ( ${MODULE_NAME}
 
 # ---- Install ----
 install ( TARGETS ${MODULE_NAME}
+    EXPORT CUPDAQTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 install ( DIRECTORY inc/

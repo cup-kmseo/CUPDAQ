@@ -23,6 +23,9 @@ include(CMakeFindDependencyMacro)
 
 # ROOT is mandatory for CUPDAQ
 find_dependency(ROOT REQUIRED COMPONENTS Core RIO)
+
+# CUPDataModel provides RawObjs and optionally HDF5Utils
+find_dependency(CUPDataModel REQUIRED)
 # Use ROOT_USE_FILE only if necessary (legacy support)
 if(ROOT_USE_FILE AND EXISTS "${ROOT_USE_FILE}")
   include("${ROOT_USE_FILE}")
@@ -38,11 +41,8 @@ if(PkgConfig_FOUND)
   pkg_check_modules(LIBUSB QUIET IMPORTED_TARGET libusb-1.0)
 endif()
 
-# HDF5 (Optional; checked during build time)
-set(CUPDAQ_HAS_HDF5 @CUPDAQ_ENABLE_HDF5@)
-if(CUPDAQ_HAS_HDF5)
-  find_dependency(HDF5 COMPONENTS C CXX HL)
-endif()
+# HDF5 availability (derived from CUPDataModel at build time)
+set(CUPDAQ_ENABLE_HDF5 @CUPDAQ_ENABLE_HDF5@)
 
 # ------------------------------------------------------------
 # Exported targets
@@ -58,9 +58,6 @@ endif()
 set(CUPDAQ_INCLUDE_DIRS "${CUPDAQ_INCLUDE_DIR}")
 set(CUPDAQ_LIBRARY_DIRS "${CUPDAQ_LIBRARY_DIR}")
 set(CUPDAQ_LIBRARIES    CUPDAQ::DAQ) # Primary entry point
-
-# Expose feature toggles
-set(CUPDAQ_ENABLE_HDF5 ${CUPDAQ_HAS_HDF5})
 
 # Final sanity check
 check_required_components(CUPDAQ)
