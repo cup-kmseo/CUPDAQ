@@ -18,10 +18,6 @@ target_include_directories ( ${MODULE_NAME}
         ${ROOT_INCLUDE_DIRS}
 )
 
-if ( CUPDAQ_ENABLE_HDF5 )
-    target_include_directories ( ${MODULE_NAME} PUBLIC ${HDF5_INCLUDE_DIRS} )
-endif ()
-
 # Link dependencies and inherit global flags
 target_link_libraries ( ${MODULE_NAME}
     PUBLIC
@@ -39,8 +35,8 @@ target_link_libraries ( ${MODULE_NAME}
         OnlHistogramer
 )
 
-if ( CUPDAQ_ENABLE_HDF5 )
-    target_link_libraries ( ${MODULE_NAME} PUBLIC ${HDF5_LIBRARIES} HDF5Utils )
+if ( TARGET HDF5Utils )
+    target_link_libraries ( ${MODULE_NAME} PUBLIC HDF5Utils )
 endif ()
 
 target_compile_definitions ( ${MODULE_NAME}

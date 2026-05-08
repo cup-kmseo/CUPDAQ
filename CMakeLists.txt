@@ -55,22 +55,16 @@ find_package ( cppzmq REQUIRED )
 # Apply global optimization flags to all sub-directories
 add_compile_options ( -O2 )
 
-# ---- HDF5 (optional) ----
+# ---- CUPDataModel submodule (provides RawObjs and optionally HDF5Utils) ----
 option ( CUPDAQ_ENABLE_HDF5 "Enable HDF5-based utilities" ON )
-
 if ( CUPDAQ_ENABLE_HDF5 )
-  find_package ( HDF5 QUIET COMPONENTS C CXX HL )
-
-  if ( HDF5_FOUND )
-    message ( STATUS "HDF5 found (${HDF5_VERSION}): enabling HDF5Utils module" )
-    add_compile_definitions ( ENABLE_HDF5 )
-    add_subdirectory ( HDF5Utils )
-  else ()
-    message ( STATUS "HDF5 not found: skipping HDF5Utils module" )
-    set ( CUPDAQ_ENABLE_HDF5 OFF CACHE BOOL "Enable HDF5-based utilities" FORCE )
-  endif ()
+  set ( CUPDM_ENABLE_HDF5 ON CACHE BOOL "" FORCE )
 else ()
-  message ( STATUS "HDF5 disabled" )
+  set ( CUPDM_ENABLE_HDF5 OFF CACHE BOOL "" FORCE )
+endif ()
+add_subdirectory ( CUPDataModel )
+if ( NOT TARGET HDF5Utils )
+  set ( CUPDAQ_ENABLE_HDF5 OFF CACHE BOOL "Enable HDF5-based utilities" FORCE )
 endif ()
 
 # ---- Submodules ----
@@ -82,7 +76,6 @@ add_subdirectory ( DAQSystem )
 add_subdirectory ( OnlObjs )
 add_subdirectory ( DAQTrigger )
 add_subdirectory ( OnlHistogramer )
-add_subdirectory ( RawObjs )
 add_subdirectory ( DAQ )
 
 # ---- Environment Setup Script Generation (setup_cupdaq.sh) ----
