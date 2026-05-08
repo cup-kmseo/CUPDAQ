@@ -35,6 +35,7 @@ target_compile_definitions ( ${MODULE_NAME}
 
 # ---- Install ----
 install ( TARGETS ${MODULE_NAME}
+    EXPORT CUPDAQTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 install ( DIRECTORY inc/

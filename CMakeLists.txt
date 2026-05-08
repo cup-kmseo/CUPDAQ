@@ -55,22 +55,13 @@ find_package ( cppzmq REQUIRED )
 # Apply global optimization flags to all sub-directories
 add_compile_options ( -O2 )
 
-# ---- HDF5 (optional) ----
-option ( CUPDAQ_ENABLE_HDF5 "Enable HDF5-based utilities" ON )
-
-if ( CUPDAQ_ENABLE_HDF5 )
-  find_package ( HDF5 QUIET COMPONENTS C CXX HL )
-
-  if ( HDF5_FOUND )
-    message ( STATUS "HDF5 found (${HDF5_VERSION}): enabling HDF5Utils module" )
-    add_compile_definitions ( ENABLE_HDF5 )
-    add_subdirectory ( HDF5Utils )
-  else ()
-    message ( STATUS "HDF5 not found: skipping HDF5Utils module" )
-    set ( CUPDAQ_ENABLE_HDF5 OFF CACHE BOOL "Enable HDF5-based utilities" FORCE )
-  endif ()
+# ---- CUPDataModel (external package: provides RawObjs and optionally HDF5Utils) ----
+find_package ( CUPDataModel REQUIRED )
+if ( TARGET CUPDataModel::HDF5Utils )
+  set ( CUPDAQ_ENABLE_HDF5 ON CACHE BOOL "HDF5 support (derived from CUPDataModel)" FORCE )
+  add_compile_definitions ( ENABLE_HDF5 )
 else ()
-  message ( STATUS "HDF5 disabled" )
+  set ( CUPDAQ_ENABLE_HDF5 OFF CACHE BOOL "HDF5 support (derived from CUPDataModel)" FORCE )
 endif ()
 
 # ---- Submodules ----
@@ -82,7 +73,6 @@ add_subdirectory ( DAQSystem )
 add_subdirectory ( OnlObjs )
 add_subdirectory ( DAQTrigger )
 add_subdirectory ( OnlHistogramer )
-add_subdirectory ( RawObjs )
 add_subdirectory ( DAQ )
 
 # ---- Environment Setup Script Generation (setup_cupdaq.sh) ----
@@ -111,3 +101,29 @@ echo \"[CUPDAQ] Environment loaded from: \$CUPDAQ_DIR\"
 
 # Install the script to the root of the installation prefix
 install ( FILES ${CMAKE_BINARY_DIR}/setup_cupdaq.sh DESTINATION . )
+
+# ---- Package Export ----
+include ( CMakePackageConfigHelpers )
+
+configure_package_config_file (
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/CUPDAQConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CUPDAQ
+)
+
+write_basic_package_version_file (
+    ${CMAKE_CURRENT_BINARY_DIR}/CUPDAQConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
+
+install ( EXPORT CUPDAQTargets
+    NAMESPACE CUPDAQ::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CUPDAQ
+)
+
+install ( FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/CUPDAQConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/CUPDAQConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CUPDAQ
+)

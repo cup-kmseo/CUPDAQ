@@ -7,12 +7,15 @@ CUPDAQ is a C++ based data acquisition system designed for the **Center for Unde
 ## Requirements
 
 * **ROOT** >= 6.00 (Core, RIO, Hist, Gpad)
+* **CUPDataModel** — raw data object library (RawObjs, HDF5Utils)
+  * Repository: https://github.com/cup-software2018/CUPDataModel
+  * Must be installed before building CUPDAQ
 * **libusb-1.0** (USB communication for Notice Korea boards)
 * **yaml-cpp** (Configuration file parsing)
   * Command: `sudo dnf install yaml-cpp yaml-cpp-devel`
 * **ZeroMQ & cppzmq** (Message server and network communication)
   * Command: `sudo dnf install zeromq zeromq-devel cppzmq-devel`
-* **(Optional) HDF5** (High-performance data writing, tested with 1.14.2)
+* **(Optional) HDF5** >= 1.14 (required if CUPDataModel was built with HDF5 support)
 
 ---
 
@@ -42,20 +45,30 @@ To allow CUPDAQ to access connected USB devices without root privileges, configu
 
 CUPDAQ uses a modern CMake build system that supports **relocatable** installations via RPATH.
 
+### Step 1 — Install CUPDataModel
+
+CUPDataModel provides the raw data object libraries (RawObjs, HDF5Utils) used by CUPDAQ for both ROOT-format and HDF5-format raw data. It must be installed first.
+
    ```bash
-   # Clone the repository
+   git clone https://github.com/cup-software2018/CUPDataModel.git
+   cd CUPDataModel
+   cmake -S . -B build -DCMAKE_INSTALL_PREFIX=./install
+   cmake --build build -j$(nproc)
+   cmake --install build
+   source install/setup_cupdm.sh
+   ```
+
+### Step 2 — Build CUPDAQ
+
+   ```bash
    git clone https://github.com/cup-software2018/CUPDAQ.git
    cd CUPDAQ
-
-   # Configure the build
    cmake -S . -B build -DCMAKE_INSTALL_PREFIX=./install
-
-   # Build using all available cores
    cmake --build build -j$(nproc)
-
-   # Install to the prefix directory
    cmake --install build
    ```
+
+> **Note:** CMake locates CUPDataModel via `find_package(CUPDataModel)`. If it was installed to a non-standard path, pass `-DCUPDataModel_DIR=/path/to/cupdatamodel/install/lib64/cmake/CUPDataModel` to the cmake configure step.
 
 ## Environment Setup
 
@@ -97,11 +110,32 @@ The CUPDAQ system is organized into several modular components to maintain clean
 * **DAQConfig**: Handles the parsing and management of YAML configuration files for DAQ parameters.
 * **Notice**: Hardware communication library handling USB interfacing with Notice Korea boards.
 * **DAQSystem**: Core system-level classes and logic for managing hardware components and states.
-* **OnlObjs / RawObjs**: Object definitions (ROOT objects and standalone) for raw data packaging and online data management.
+* **OnlObjs**: ROOT object definitions for online data management and monitoring.
 * **DAQTrigger**: Provides the software trigger interface (`AbsSoftTrigger`). Users can add custom trigger logic by subclassing `AbsSoftTrigger`.
 * **OnlHistogramer**: Provides real-time event monitoring and histogramming capabilities.
-* **HDF5Utils**: (Optional) Integrated tools for high-performance data writing in the HDF5 format.
 * **DAQ**: The primary module containing the central management logic (`CupDAQManager`), executable scripts, and tools.
+
+> **RawObjs** and **HDF5Utils** are now maintained in the [CUPDataModel](https://github.com/cup-software2018/CUPDataModel) package — an independent library for offline raw data analysis. CUPDAQ depends on it as an external package.
+
+---
+
+## Using CUPDAQ in Another CMake Project
+
+Once CUPDAQ is installed, it can be consumed by downstream projects via `find_package`:
+
+```cmake
+find_package(CUPDataModel REQUIRED)
+find_package(CUPDAQ REQUIRED)
+
+target_link_libraries(MyApp PRIVATE CUPDAQ::DAQ)
+```
+
+All CUPDAQ modules are exported under the `CUPDAQ::` namespace. The primary entry point is `CUPDAQ::DAQ`, which transitively brings in all required modules and dependencies.
+
+If CUPDAQ was installed to a non-standard path:
+```bash
+cmake -S . -B build -DCUPDAQ_DIR=/path/to/cupdaq/install/lib64/cmake/CUPDAQ
+```
 
 ---
 

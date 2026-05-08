@@ -16,6 +16,9 @@ target_include_directories ( ${MODULE_NAME}
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
+install ( TARGETS ${MODULE_NAME}
+    EXPORT CUPDAQTargets
+)
 install ( DIRECTORY inc/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING PATTERN "*.hh"
