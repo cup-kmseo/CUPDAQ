@@ -7,10 +7,10 @@ file ( GLOB MODULE_SOURCES CONFIGURE_DEPENDS src/*.cc )
 file ( COPY ${CMAKE_CURRENT_SOURCE_DIR}/inc/
      DESTINATION ${CUPDAQ_HEADER_OUTPUT_PATH}
      FILES_MATCHING PATTERN "*.hh" )
-file ( COPY ${CMAKE_CURRENT_SOURCE_DIR}/inc/LinkDef.h
-     DESTINATION ${CUPDAQ_HEADER_OUTPUT_PATH}/${MODULE_NAME} )
 
-set ( DICT_I_FLAGS -I${CUPDAQ_HEADER_OUTPUT_PATH} )
+include_directories ( ${CMAKE_CURRENT_SOURCE_DIR}/inc )
+
+set ( DICT_I_FLAGS -I${CMAKE_CURRENT_SOURCE_DIR}/inc )
 if ( LIBUSB_INCLUDE_DIRS )
     list ( APPEND DICT_I_FLAGS -I${LIBUSB_INCLUDE_DIRS} )
 endif ()
@@ -18,13 +18,14 @@ endif ()
 set ( DICT_HEADERS "" )
 foreach ( _h ${MODULE_HEADERS} )
     get_filename_component ( _n ${_h} NAME )
-    list ( APPEND DICT_HEADERS ${CUPDAQ_HEADER_OUTPUT_PATH}/${_n} )
+    list ( APPEND DICT_HEADERS ${_n} )
 endforeach ()
 
 ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
     ${DICT_HEADERS}
-    LINKDEF ${CUPDAQ_HEADER_OUTPUT_PATH}/${MODULE_NAME}/LinkDef.h
+    LINKDEF ${CMAKE_CURRENT_SOURCE_DIR}/inc/LinkDef.h
     OPTIONS ${DICT_I_FLAGS} -Wno-inconsistent-missing-override
+    NOINSTALL
 )
 
 add_library ( ${MODULE_NAME} SHARED
@@ -41,24 +42,13 @@ target_include_directories ( ${MODULE_NAME}
 
 target_link_libraries ( ${MODULE_NAME}
     PUBLIC
-        ${ROOT_LIBRARIES}
+        ROOT::Core
         PkgConfig::LIBUSB
         DAQUtils
         DAQConfig
 )
 
 target_compile_definitions ( ${MODULE_NAME} PUBLIC ${ROOT_DEFINITIONS} )
-
-set ( _INSTALL_HDRS "" )
-foreach ( _h ${MODULE_HEADERS} )
-    get_filename_component ( _n ${_h} NAME )
-    list ( APPEND _INSTALL_HDRS ${_n} )
-endforeach ()
-
-set ( _NOTICE_LIBUSB_I "" )
-if ( LIBUSB_INCLUDE_DIRS )
-    set ( _NOTICE_LIBUSB_I "-I${LIBUSB_INCLUDE_DIRS}" )
-endif ()
 
 # ---- Install ----
 install ( TARGETS ${MODULE_NAME}
@@ -69,32 +59,10 @@ install ( DIRECTORY inc/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING PATTERN "*.hh"
 )
-install ( CODE "
-    set ( _libdir \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\" )
-    set ( _incdir \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}\" )
-    set ( _headers \"\" )
-    foreach ( _n ${_INSTALL_HDRS} )
-        list ( APPEND _headers \"\${_incdir}/\${_n}\" )
-    endforeach ()
-    message ( STATUS \"[CUPDAQ] Regenerating PCM for ${MODULE_NAME}\" )
-    execute_process (
-        COMMAND \"${ROOT_BINDIR}/rootcling\"
-            -f \"\${_libdir}/G__${MODULE_NAME}_tmp.cxx\"
-            -s \"\${_libdir}/lib${MODULE_NAME}.so\"
-            -rml \"lib${MODULE_NAME}.so\"
-            -rmf \"\${_libdir}/lib${MODULE_NAME}.rootmap\"
-            -I\"\${_incdir}\"
-            ${_NOTICE_LIBUSB_I}
-            -Wno-inconsistent-missing-override
-            \${_headers}
-            \"${CMAKE_CURRENT_SOURCE_DIR}/inc/LinkDef.h\"
-        RESULT_VARIABLE _rc
-        ERROR_VARIABLE _err
-    )
-    file ( REMOVE \"\${_libdir}/G__${MODULE_NAME}_tmp.cxx\" )
-    if ( _rc )
-        message ( WARNING \"[CUPDAQ] PCM regeneration failed for ${MODULE_NAME}: \${_err}\" )
-    endif ()
-" )
+install ( FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/lib${MODULE_NAME}_rdict.pcm
+    ${CMAKE_CURRENT_BINARY_DIR}/lib${MODULE_NAME}.rootmap
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
 
 #add_subdirectory ( test )

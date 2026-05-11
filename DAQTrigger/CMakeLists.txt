@@ -21,7 +21,7 @@ target_include_directories ( ${MODULE_NAME}
 # Link dependencies and inherit global flags
 target_link_libraries ( ${MODULE_NAME}
     PUBLIC
-        ${ROOT_LIBRARIES}
+        ROOT::Core
         OnlConsts
         DAQUtils
         DAQConfig

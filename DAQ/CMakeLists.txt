@@ -23,7 +23,10 @@ target_link_libraries ( ${MODULE_NAME}
     PUBLIC
         yaml-cpp
         cppzmq
-        ${ROOT_LIBRARIES}
+        ROOT::Core
+        ROOT::RIO
+        ROOT::Tree
+        ROOT::Net
         OnlConsts
         Notice
         DAQUtils
