@@ -19,7 +19,9 @@ endforeach ()
 ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
     ${DICT_HEADERS}
     LINKDEF ${CMAKE_CURRENT_SOURCE_DIR}/inc/LinkDef.h
-    OPTIONS -I${CMAKE_CURRENT_SOURCE_DIR}/inc -Wno-inconsistent-missing-override
+    OPTIONS -I${CMAKE_CURRENT_SOURCE_DIR}/inc
+            -I${CUPDAQ_HEADER_OUTPUT_PATH}
+            -Wno-inconsistent-missing-override
     NOINSTALL
 )
 
