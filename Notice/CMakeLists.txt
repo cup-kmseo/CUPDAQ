@@ -23,6 +23,8 @@ endforeach ()
 
 ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
     ${DICT_HEADERS}
+    MODULE ${MODULE_NAME}
+    NO_CXXMODULE
     LINKDEF ${CMAKE_CURRENT_SOURCE_DIR}/inc/LinkDef.h
     OPTIONS ${DICT_I_FLAGS} -Wno-inconsistent-missing-override
     NOINSTALL
@@ -37,7 +39,6 @@ target_include_directories ( ${MODULE_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-        ${ROOT_INCLUDE_DIRS}
 )
 
 target_link_libraries ( ${MODULE_NAME}
@@ -47,8 +48,6 @@ target_link_libraries ( ${MODULE_NAME}
         DAQUtils
         DAQConfig
 )
-
-target_compile_definitions ( ${MODULE_NAME} PUBLIC ${ROOT_DEFINITIONS} )
 
 # ---- Install ----
 install ( TARGETS ${MODULE_NAME}

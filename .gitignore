@@ -1,6 +1,6 @@
 /.lh
 /.vscode
-/build
+/build*
 /test
 /bin
 /include

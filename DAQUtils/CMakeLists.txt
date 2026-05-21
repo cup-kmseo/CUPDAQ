@@ -1,6 +1,3 @@
-# ------------------------------------------------------------
-# DAQUtils - Header-only utility library
-# ------------------------------------------------------------
 set ( MODULE_NAME DAQUtils )
 message ( STATUS "Configuring ${MODULE_NAME} ..." )
 
