@@ -1,6 +1,3 @@
-# ------------------------------------------------------------
-# OnlConsts - Header-only library
-# ------------------------------------------------------------
 set ( MODULE_NAME OnlConsts )
 message ( STATUS "Configuring ${MODULE_NAME} ..." )
 

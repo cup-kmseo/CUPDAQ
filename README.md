@@ -4,18 +4,51 @@
 
 CUPDAQ is a C++ based data acquisition system designed for the **Center for Underground Physics (CUP)**. It supports various digitizers and TCB (Trigger Control Board) modules used in neutrino and dark matter search experiments.
 
+## System Requirements
+
+CUPDAQ requires **C++17** and **CMake 3.16** or later. The following minimum OS/compiler versions are supported:
+
+| Platform | Minimum Version | Default Compiler |
+|----------|----------------|------------------|
+| RHEL / Rocky / Alma | **8** | GCC 8+ |
+| Fedora | **28** | GCC 8+ |
+| Ubuntu / Debian | **20.04 / Buster** | GCC 9+ |
+
+> **RHEL/CentOS 7 is not supported** — the default GCC (4.8.5) and CMake (2.8) are both too old.
+> Using `devtoolset` (SCL) may work but is not tested or recommended.
+
+---
+
 ## Requirements
 
-* **ROOT** >= 6.00 (Core, RIO, Hist, Gpad)
-* **CUPDataModel** — raw data object library (RawObjs, HDF5Utils)
-  * Repository: https://github.com/cup-software2018/CUPDataModel
-  * Must be installed before building CUPDAQ
-* **libusb-1.0** (USB communication for Notice Korea boards)
-* **yaml-cpp** (Configuration file parsing)
-  * Command: `sudo dnf install yaml-cpp yaml-cpp-devel`
-* **ZeroMQ & cppzmq** (Message server and network communication)
-  * Command: `sudo dnf install zeromq zeromq-devel cppzmq-devel`
-* **(Optional) HDF5** >= 1.14 (required if CUPDataModel was built with HDF5 support)
+| Dependency | Notes |
+|------------|-------|
+| **ROOT** >= 6.00 | Core, RIO, RHTTP components required |
+| **CUPDataModel** | Raw data object library — must be installed before CUPDAQ (see below) |
+| **libusb-1.0** | USB communication for Notice Korea boards |
+| **yaml-cpp** | Configuration file parsing |
+| **ZeroMQ / cppzmq** | Message server and network communication |
+| **HDF5** >= 1.14 *(optional)* | Required only if CUPDataModel was built with HDF5 support |
+
+> **Auto-installation (root only):** When CMake is invoked as `root`, missing system packages
+> (ROOT, libusb, yaml-cpp, ZeroMQ) are installed automatically via the system package manager
+> (`dnf`/`yum` on RHEL-family, `apt` on Debian/Ubuntu). This is controlled by the CMake option
+> `CUPDAQ_AUTO_INSTALL_DEPENDENCIES` (default: `ON`).
+> CUPDataModel cannot be auto-installed and must always be set up manually first.
+
+### Manual package installation
+
+If building without root privileges, install dependencies beforehand:
+
+**RHEL / Rocky / Fedora**
+```bash
+sudo dnf install libusb1-devel yaml-cpp-devel zeromq-devel cppzmq-devel pkgconf-pkg-config
+```
+
+**Ubuntu / Debian**
+```bash
+sudo apt install libusb-1.0-0-dev libyaml-cpp-dev libzmq3-dev pkg-config
+```
 
 ---
 
@@ -49,26 +82,41 @@ CUPDAQ uses a modern CMake build system that supports **relocatable** installati
 
 CUPDataModel provides the raw data object libraries (RawObjs, HDF5Utils) used by CUPDAQ for both ROOT-format and HDF5-format raw data. It must be installed first.
 
-   ```bash
-   git clone https://github.com/cup-software2018/CUPDataModel.git
-   cd CUPDataModel
-   cmake -S . -B build -DCMAKE_INSTALL_PREFIX=./install
-   cmake --build build -j$(nproc)
-   cmake --install build
-   source install/setup_cupdm.sh
-   ```
+```bash
+git clone https://github.com/cup-software2018/CUPDataModel.git
+cd CUPDataModel
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=./install
+cmake --build build -j$(nproc)
+cmake --install build
+source install/setup_cupdm.sh
+```
 
-### Step 2 — Build CUPDAQ
+> When running as root, CUPDataModel will also auto-install its own missing dependencies (ROOT, HDF5).
 
-   ```bash
-   git clone https://github.com/cup-software2018/CUPDAQ.git
-   cd CUPDAQ
-   cmake -S . -B build -DCMAKE_INSTALL_PREFIX=./install
-   cmake --build build -j$(nproc)
-   cmake --install build
-   ```
+### Step 2 — Build and Install CUPDAQ
 
-> **Note:** CMake locates CUPDataModel via `find_package(CUPDataModel)`. If it was installed to a non-standard path, pass `-DCUPDataModel_DIR=/path/to/cupdatamodel/install/lib64/cmake/CUPDataModel` to the cmake configure step.
+```bash
+git clone https://github.com/cup-software2018/CUPDAQ.git
+cd CUPDAQ
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=./install
+cmake --build build -j$(nproc)
+cmake --install build
+```
+
+During the `cmake -S . -B build` configure step, if running as root, any missing system packages
+(ROOT, libusb, yaml-cpp, ZeroMQ) are installed automatically before the build begins.
+
+To **disable** auto-installation:
+```bash
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=./install -DCUPDAQ_AUTO_INSTALL_DEPENDENCIES=OFF
+```
+
+> **Non-standard CUPDataModel path:** If CUPDataModel was installed to a custom prefix, point CMake to it:
+> ```bash
+> cmake -S . -B build \
+>   -DCMAKE_INSTALL_PREFIX=./install \
+>   -DCUPDataModel_DIR=/path/to/cupdatamodel/install/lib64/cmake/CUPDataModel
+> ```
 
 ## Environment Setup
 

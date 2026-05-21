@@ -17,6 +17,24 @@ set ( CMAKE_CXX_EXTENSIONS OFF )
 # Use standard GNU installation directories
 include ( GNUInstallDirs )
 
+option ( CUPDAQ_AUTO_INSTALL_DEPENDENCIES "Automatically install missing system dependencies when running as root" ON )
+
+# Platform detection, privilege detection, and auto-install helpers
+include ( cmake/CUPDAQHelpers.cmake )
+
+# ---- Install Prefix ----
+# When running as root with no explicit prefix, install into a system path
+if ( CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT )
+  if ( CUPDAQ_IS_ROOT )
+    set ( CMAKE_INSTALL_PREFIX "/usr" CACHE PATH "Install path prefix" FORCE )
+    message ( STATUS "Running as root: defaulting install prefix to /usr" )
+  else ()
+    message ( STATUS "CMAKE_INSTALL_PREFIX not specified; defaulting to ${CMAKE_INSTALL_PREFIX}" )
+  endif ()
+else ()
+  message ( STATUS "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}" )
+endif ()
+
 # ---- Build-tree header staging area ----
 # All module headers are staged here so rootcling can resolve cross-module includes.
 # Mirrors what ROOT does with HEADER_OUTPUT_PATH = CMAKE_BINARY_DIR/include.
@@ -33,23 +51,70 @@ set ( CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE )
 # Binaries in 'bin/' will look for libraries in '../lib64' or '../lib'.
 set ( CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}" )
 
-# ---- ROOT ----
+# ---- ROOT (pre-installed; verify only) ----
 find_package ( ROOT REQUIRED COMPONENTS Core RIO RHTTP )
+message ( STATUS "Found ROOT ${ROOT_VERSION}: ${ROOT_DIR}" )
 include ( ${ROOT_USE_FILE} )
 
-# Prevent absolute paths from being hardcoded in ROOT dictionaries
-set ( CMAKE_ROOT_DICT_ARGS --noinclude )
-set ( ROOT_GENERATE_DICTIONARY_RELATIVE ON )
+# ---- PkgConfig ----
+find_package ( PkgConfig QUIET )
+if ( NOT PkgConfig_FOUND AND CUPDAQ_AUTO_INSTALL_DEPENDENCIES AND CUPDAQ_IS_ROOT )
+  if ( CUPDAQ_DNF_EXECUTABLE )
+    cupdaq_install_system_packages ( pkgconf-pkg-config )
+  elseif ( CUPDAQ_DEBIAN_PKG_EXECUTABLE )
+    cupdaq_install_system_packages ( pkg-config )
+  else ()
+    cupdaq_install_system_packages ( pkgconfig )
+  endif ()
+  find_package ( PkgConfig REQUIRED )
+else ()
+  find_package ( PkgConfig REQUIRED )
+endif ()
 
 # ---- libusb (via pkg-config) ----
-find_package ( PkgConfig REQUIRED )
-pkg_check_modules ( LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0 )
+pkg_check_modules ( LIBUSB QUIET IMPORTED_TARGET libusb-1.0 )
+if ( NOT LIBUSB_FOUND AND CUPDAQ_AUTO_INSTALL_DEPENDENCIES AND CUPDAQ_IS_ROOT )
+  if ( CUPDAQ_DNF_EXECUTABLE )
+    cupdaq_install_system_packages ( libusb1-devel )
+  elseif ( CUPDAQ_DEBIAN_PKG_EXECUTABLE )
+    cupdaq_install_system_packages ( libusb-1.0-0-dev )
+  else ()
+    cupdaq_install_system_packages ( libusb-devel )
+  endif ()
+  pkg_check_modules ( LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0 )
+else ()
+  pkg_check_modules ( LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0 )
+endif ()
 
 # ---- yaml-cpp for configuration ----
-find_package ( yaml-cpp REQUIRED )
+find_package ( yaml-cpp QUIET )
+if ( NOT yaml-cpp_FOUND AND CUPDAQ_AUTO_INSTALL_DEPENDENCIES AND CUPDAQ_IS_ROOT )
+  if ( CUPDAQ_DNF_EXECUTABLE )
+    cupdaq_install_system_packages ( yaml-cpp-devel )
+  elseif ( CUPDAQ_DEBIAN_PKG_EXECUTABLE )
+    cupdaq_install_system_packages ( libyaml-cpp-dev )
+  else ()
+    cupdaq_install_system_packages ( yaml-cpp-devel )
+  endif ()
+  find_package ( yaml-cpp REQUIRED )
+else ()
+  find_package ( yaml-cpp REQUIRED )
+endif ()
 
 # ---- zeromq (cppzmq) for message server ----
-find_package ( cppzmq REQUIRED )
+find_package ( cppzmq QUIET )
+if ( NOT cppzmq_FOUND AND CUPDAQ_AUTO_INSTALL_DEPENDENCIES AND CUPDAQ_IS_ROOT )
+  if ( CUPDAQ_DNF_EXECUTABLE )
+    cupdaq_install_system_packages ( zeromq-devel cppzmq-devel )
+  elseif ( CUPDAQ_DEBIAN_PKG_EXECUTABLE )
+    cupdaq_install_system_packages ( libzmq3-dev )
+  else ()
+    cupdaq_install_system_packages ( zeromq-devel )
+  endif ()
+  find_package ( cppzmq REQUIRED )
+else ()
+  find_package ( cppzmq REQUIRED )
+endif ()
 
 # ---- Global Compiler Settings ----
 # Apply global optimization flags to all sub-directories
@@ -127,3 +192,13 @@ install ( FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CUPDAQConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CUPDAQ
 )
+
+# ---- Run ldconfig after installing to a system path ----
+install ( CODE "
+  if (UNIX AND NOT APPLE)
+    if (CMAKE_INSTALL_PREFIX MATCHES \"^(/usr|/usr/local)(/.*)?$\")
+      message(STATUS \"Running ldconfig...\")
+      execute_process(COMMAND ldconfig)
+    endif()
+  endif()
+")

@@ -15,10 +15,8 @@ target_include_directories ( ${MODULE_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-        ${ROOT_INCLUDE_DIRS}
 )
 
-# Link dependencies and inherit global flags
 target_link_libraries ( ${MODULE_NAME}
     PUBLIC
         ROOT::Core
@@ -26,11 +24,6 @@ target_link_libraries ( ${MODULE_NAME}
         DAQUtils
         DAQConfig
         OnlObjs
-)
-
-target_compile_definitions ( ${MODULE_NAME}
-    PUBLIC
-        ${ROOT_DEFINITIONS}
 )
 
 # ---- Install ----
