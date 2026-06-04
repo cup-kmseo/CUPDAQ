@@ -6,14 +6,6 @@
 #include <yaml-cpp/yaml.h>
 
 #include "AbsConfList.hh"
-#include "DAQConf.hh"
-#include "FADCSConf.hh"
-#include "FADCTConf.hh"
-#include "GADCSConf.hh"
-#include "IADCTConf.hh"
-#include "MADCSConf.hh"
-#include "SADCTConf.hh"
-#include "TCBConf.hh"
 
 class RunConfig {
 public:

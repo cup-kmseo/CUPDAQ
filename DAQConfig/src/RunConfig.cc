@@ -1,8 +1,16 @@
 #include <sstream>
 
-#include "RunConfig.hh"
-#include "TriggerLookupTable.hh"
+#include "DAQConf.hh"
 #include "ELog.hh"
+#include "FADCSConf.hh"
+#include "FADCTConf.hh"
+#include "GADCSConf.hh"
+#include "IADCTConf.hh"
+#include "MADCSConf.hh"
+#include "RunConfig.hh"
+#include "SADCTConf.hh"
+#include "TCBConf.hh"
+#include "TriggerLookupTable.hh"
 
 RunConfig::RunConfig() { fConfigs = std::make_unique<AbsConfList>(); }
 
@@ -34,8 +42,7 @@ bool RunConfig::ReadConfig(const char * name)
           // Merge the included node into the merged_node
           merged_node = MergeNodes(merged_node, inc_node);
           INFO("Included config %s is successfully loaded and merged", inc_file.c_str());
-        }
-        catch (const std::exception & e) {
+        } catch (const std::exception & e) {
           ERROR("Failed to load included file %s: %s", inc_file.c_str(), e.what());
           return false;
         }
@@ -64,15 +71,12 @@ bool RunConfig::ReadConfig(const char * name)
 
     INFO("reading config %s is done", name);
     return true;
-  }
-  catch (const YAML::BadFile & e) {
+  } catch (const YAML::BadFile & e) {
     ERROR("file not found, %s", filename.c_str());
-  }
-  catch (const YAML::ParserException & e) {
+  } catch (const YAML::ParserException & e) {
     ERROR("syntax error (%s) at line %d, col %d of config file", e.msg.c_str(), e.mark.line + 1,
           e.mark.column + 1);
-  }
-  catch (const std::exception & e) {
+  } catch (const std::exception & e) {
     const char * err_msg = e.what();
     ERROR("unknown error(%s) on reading config file", err_msg ? err_msg : "Unknown");
   }
@@ -119,8 +123,7 @@ void RunConfig::FillConfigArray(YAML::Node node, int nch, std::function<void(int
   else {
     try {
       val = node.as<std::vector<T>>();
-    }
-    catch (...) {
+    } catch (...) {
       return;
     }
   }
@@ -156,8 +159,7 @@ void RunConfig::ConfigDAQ(YAML::Node ymlnode)
       int port = server["PORT"].as<int>();
 
       conf->AddDAQ(id, name, ip, port);
-    }
-    catch (const YAML::Exception & e) {
+    } catch (const YAML::Exception & e) {
       WARNING("Failed to parse DAQ server entry: %s", e.what());
     }
   }
@@ -172,13 +174,14 @@ void RunConfig::ConfigTCB(YAML::Node ymlnode)
   auto * conf = new TCBConf(0);
   auto tcb = ymlnode["TCB"];
 
-  auto setSafeSW = [](YAML::Node node, std::function<void(int, int, int, int)> setter) {
-    if (!node) return;
+  auto setSafeSW = [](const YAML::Node & node,
+                      const std::function<void(int, int, int, int)> & setter) {
+    if (!node || !node.IsSequence()) return;
     std::vector<int> sw = node.as<std::vector<int>>();
-    int s0 = (sw.size() > 0) ? sw[0] : 0;
-    int s1 = (sw.size() > 1) ? sw[1] : 0;
-    int s2 = (sw.size() > 2) ? sw[2] : 0;
-    int s3 = (sw.size() > 3) ? sw[3] : 0;
+    int s0 = (sw.size() > 0u) ? sw[0] : 0;
+    int s1 = (sw.size() > 1u) ? sw[1] : 0;
+    int s2 = (sw.size() > 2u) ? sw[2] : 0;
+    int s3 = (sw.size() > 3u) ? sw[3] : 0;
     setter(s0, s1, s2, s3);
   };
 
