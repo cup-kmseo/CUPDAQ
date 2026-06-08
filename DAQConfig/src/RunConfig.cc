@@ -25,7 +25,7 @@ bool RunConfig::ReadConfig(const char * name)
   }
 
   try {
-    YAML::Node main_node = YAML::LoadFile(filename.c_str());
+    YAML::Node main_node = ExpandMergeKeys(YAML::LoadFile(filename.c_str()));
     if (main_node.IsNull()) {
       ERROR("config file is empty");
       return false;
@@ -38,7 +38,7 @@ bool RunConfig::ReadConfig(const char * name)
       for (const auto & inc : main_node["Include"]) {
         std::string inc_file = inc.as<std::string>();
         try {
-          YAML::Node inc_node = YAML::LoadFile(inc_file.c_str());
+          YAML::Node inc_node = ExpandMergeKeys(YAML::LoadFile(inc_file.c_str()));
           // Merge the included node into the merged_node
           merged_node = MergeNodes(merged_node, inc_node);
           INFO("Included config %s is successfully loaded and merged", inc_file.c_str());
@@ -82,6 +82,51 @@ bool RunConfig::ReadConfig(const char * name)
   }
 
   return false;
+}
+
+YAML::Node RunConfig::ExpandMergeKeys(YAML::Node node)
+{
+  if (node.IsMap()) {
+    YAML::Node result;
+
+    // Apply merge sources first; earlier sources have higher priority over later ones
+    if (node["<<"]) {
+      YAML::Node merge_src = node["<<"];
+      auto apply_merge = [&](YAML::Node src) {
+        if (!src.IsMap()) return;
+        src = ExpandMergeKeys(src);
+        for (auto it = src.begin(); it != src.end(); ++it) {
+          std::string key = it->first.as<std::string>();
+          if (!result[key]) result[key] = it->second;
+        }
+      };
+      if (merge_src.IsSequence()) {
+        for (const auto & m : merge_src)
+          apply_merge(m);
+      }
+      else {
+        apply_merge(merge_src);
+      }
+    }
+
+    // Explicit keys always override merged content
+    for (auto it = node.begin(); it != node.end(); ++it) {
+      std::string key = it->first.as<std::string>();
+      if (key == "<<") continue;
+      result[key] = ExpandMergeKeys(it->second);
+    }
+
+    return result;
+  }
+
+  if (node.IsSequence()) {
+    YAML::Node result;
+    for (const auto & elem : node)
+      result.push_back(ExpandMergeKeys(elem));
+    return result;
+  }
+
+  return node;
 }
 
 YAML::Node RunConfig::MergeNodes(YAML::Node target, YAML::Node source)

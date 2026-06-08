@@ -19,6 +19,7 @@ public:
   virtual bool ReadConfig(const char * name);
 
 private:
+  YAML::Node ExpandMergeKeys(YAML::Node node);
   YAML::Node MergeNodes(YAML::Node target, YAML::Node source);
   template <typename T>
   void FillConfigArray(YAML::Node node, int nch, std::function<void(int, T)> setter,
