@@ -1,0 +1,44 @@
+# Trigger Control Board Configuration
+TCB:
+  TYPE: 0
+  CW: 64
+  PTRG: 10
+  MTHRF: 38
+  PSCF: 1
+  TRGON: 3
+
+common_fadct: &default_fadct
+  NCH: 4
+  CID: [1, 2, 3, 4]
+  DACOFF: 3700
+  DLY: 1100
+  CW: 128
+  TM: 1
+  PCT: 1
+  PCI: 1000
+  THR: 10
+  TLT: "1+2+3+4"
+  RL: 16
+
+
+FADCT:
+  - <<: *default_fadct
+    SID: 1
+    ENABLED: 1
+    PID: [1, 2, 3, 4]
+
+  - <<: *default_fadct
+    SID: 2
+    ENABLED: 1
+    PID: [5]
+
+# ==============================================================================
+# CUPDAQ YAML Configuration Tutorial
+# ==============================================================================
+# 1. INDENTATION: Use 'Spaces' only. Never use Tabs! (Standard is 2 spaces).
+# 2. COLON (:): There MUST be a space after the colon. (e.g., SID: 1)
+# 3. LISTS: Use a hyphen (-) to define multiple modules in a sequence.
+# 4. ARRAYS: Use square brackets [ ] for channel settings (CID, PID, etc.).
+# 5. COMMENTS: Anything after '#' is ignored by the program.
+# 6. QUOTES: Use " " for logic strings like TLT to avoid parsing errors.
+# =============================================================================
