@@ -5,8 +5,9 @@
 #include "TServerSocket.h"
 
 #include "CupDAQManager.hh"
-#include "RunConfig.hh"
+#include "DAQConf.hh"
 #include "ELog.hh"
+#include "RunConfig.hh"
 
 void CupDAQManager::Run()
 {
@@ -47,8 +48,7 @@ void CupDAQManager::RC_TCB()
   std::thread th0(&CupDAQManager::TF_MsgServer, this);
   std::thread th1;
 
-  auto execute_run = [&]()
-  {
+  auto execute_run = [&]() {
     bool socketerror = false;
 
     // Max retries and wait interval (ms)
@@ -375,8 +375,7 @@ void CupDAQManager::RC_TCBCTRLDAQ()
   delete configSock;
   INFO("Successfully received updated fConfigList from TCB");
 
-  auto execute_run = [&]()
-  {
+  auto execute_run = [&]() {
     if (!AddADC(fConfigList)) {
       RUNSTATE::SetError(fRunStatus);
       return;
@@ -523,8 +522,7 @@ void CupDAQManager::RC_MERGER()
     return;
   }
 
-  auto execute_run = [&]()
-  {
+  auto execute_run = [&]() {
     if (fSoftTrigger) { fSoftTrigger->DoConfig(fConfigList); }
 
     th1 = std::thread(&CupDAQManager::TF_RunManager, this);
@@ -606,8 +604,7 @@ void CupDAQManager::RC_STDDAQ()
 
   std::thread th1, th2, th3, th4, th5, th6, th7, th8, th9;
 
-  auto execute_run = [&]()
-  {
+  auto execute_run = [&]() {
     if (!ConfigureDAQ()) { return; }
     if (!PrepareDAQ()) { return; }
     if (!InitializeDAQ()) { return; }
@@ -662,8 +659,7 @@ void CupDAQManager::RC_TCBDAQ()
     return;
   }
 
-  auto execute_run = [&]()
-  {
+  auto execute_run = [&]() {
     if (!fTCB->Config()) { return; }
     if (!AddADC(fConfigList)) { return; }
     if (!PrepareDAQ()) { return; }
