@@ -9,14 +9,18 @@ ClassImp(BuiltEvent)
 BuiltEvent::BuiltEvent()
   : TObjArray(),
     fDAQID(0),
-    fEventNumber(0)
+    fEventNumber(0),
+    fTriggerNumber(0),
+    fTriggerTime(0)
 {
 }
 
 BuiltEvent::BuiltEvent(const BuiltEvent & builtevent)
   : TObjArray(),
     fDAQID(builtevent.GetDAQID()),
-    fEventNumber(builtevent.GetEventNumber())
+    fEventNumber(builtevent.GetEventNumber()),
+    fTriggerNumber(builtevent.GetTriggerNumber()),
+    fTriggerTime(builtevent.GetTriggerTime())
 {
   const int nent = builtevent.GetLast() + 1;
   for (int i = 0; i < nent; ++i) {
@@ -56,16 +60,16 @@ unsigned int BuiltEvent::GetTriggerType() const
 
 unsigned int BuiltEvent::GetTriggerNumber() const
 {
-  if (GetEntries() == 0) { return 0U; }
+  if (GetEntries() == 0) { return fTriggerNumber; }
 
   auto * adcevent = static_cast<AbsADCRaw *>(At(0));
-  return adcevent ? adcevent->GetTriggerNumber() : 0U;
+  return adcevent ? adcevent->GetTriggerNumber() : fTriggerNumber;
 }
 
 unsigned long BuiltEvent::GetTriggerTime() const
 {
   const int nevt = GetEntries();
-  if (nevt <= 0) { return 0UL; }
+  if (nevt <= 0) { return fTriggerTime; }
 
   unsigned long fastttime = std::numeric_limits<unsigned long>::max();
 

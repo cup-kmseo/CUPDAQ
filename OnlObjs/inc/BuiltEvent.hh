@@ -8,6 +8,8 @@ class BuiltEvent : public TObjArray {
 private:
   int fDAQID;
   unsigned int fEventNumber;
+  unsigned int fTriggerNumber;
+  unsigned long fTriggerTime;
 
 public:
   BuiltEvent();
@@ -16,6 +18,8 @@ public:
 
   void SetDAQID(int id);
   void SetEventNumber(unsigned int n);
+  void SetTriggerNumber(unsigned int n);
+  void SetTriggerTime(unsigned long t);
   void AddADCEvent(AbsADCRaw * event);
 
   int GetDAQID() const;
@@ -33,13 +37,11 @@ public:
 };
 
 inline void BuiltEvent::SetDAQID(int id) { fDAQID = id; }
-
 inline void BuiltEvent::SetEventNumber(unsigned int n) { fEventNumber = n; }
-
+inline void BuiltEvent::SetTriggerNumber(unsigned int n) { fTriggerNumber = n; }
+inline void BuiltEvent::SetTriggerTime(unsigned long t) { fTriggerTime = t; }
 inline void BuiltEvent::AddADCEvent(AbsADCRaw * event) { Add(event); }
-
 inline int BuiltEvent::GetDAQID() const { return fDAQID; }
-
 inline unsigned int BuiltEvent::GetEventNumber() const { return fEventNumber; }
 
 inline bool BuiltEvent::IsSortable() const { return true; }

@@ -162,17 +162,25 @@ void CupDAQManager::BuildEvent_GLT()
         break;
       }
 
-      bool istriggered = fDoSendEvent || !fSoftTrigger || !fSoftTrigger->IsEnabled() ||
+      bool istriggered = !fSoftTrigger || !fSoftTrigger->IsEnabled() ||
                          fSoftTrigger->DoTrigger(builtevent.get());
 
-      if (istriggered) {
+      if (fDoSendEvent && !istriggered) {
+        unsigned int trgnum = builtevent->GetTriggerNumber();
+        unsigned long trgtime = builtevent->GetTriggerTime();
+        builtevent->Delete();
+        builtevent->SetTriggerNumber(trgnum);
+        builtevent->SetTriggerTime(trgtime);
+      }
+
+      if (istriggered || fDoSendEvent) {
         mlock.lock();
         fNBuiltEvent += 1;
         builtevent->SetEventNumber(fNBuiltEvent);
         mlock.unlock();
 
         fBuiltEventBuffer1.push_back(builtevent);
-        if (fDoHistograming) { fBuiltEventBuffer2.push_back(builtevent); }
+        if (fDoHistograming && istriggered) { fBuiltEventBuffer2.push_back(builtevent); }
       }
 
       totalsize -= 1;
@@ -258,6 +266,8 @@ void CupDAQManager::MergeEvent()
       mlock.unlock();
 
       auto builtevent = std::make_shared<BuiltEvent>();
+      builtevent->SetTriggerNumber(refTrigNum);
+      builtevent->SetTriggerTime(refTrigTime);
       for (auto & [daqId, buf] : fRecvEventBuffers) {
         auto ev = *buf->pop_front();
         int nadc = ev->GetEntries();
@@ -282,6 +292,11 @@ void CupDAQManager::MergeEvent()
             default: break;
           }
         }
+      }
+
+      if (builtevent->GetEntries() == 0) {
+        totalsize -= 1;
+        continue;
       }
 
       bool istriggered = true;
