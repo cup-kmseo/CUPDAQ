@@ -55,6 +55,7 @@ bool RunConfig::ReadConfig(const char * name)
       oss << merged_node;
       yaml_str = oss.str();
     }
+
     fConfigs->SetYAMLString(yaml_str.c_str());
 
     // Now call the config functions only ONCE with the merged node
