@@ -48,12 +48,14 @@ void TCBConf::PrintConf() const
                  "                  MTHRI(%d)  PSCI(%d)  DTI(%d)  TSWI(%s)",
                  fSID, fTM, fCW, fDLY, fPTRG, fMTHRF, fPSCF, fDTF, swf, fMTHRSM, fPSCSM, fDTSM,
                  swsm, fMTHRSL, fPSCSL, fDTSL, swsl, fMTHRI, fPSCI, fDTI, swi)
+         << endl
          << endl;
   }
   else {
     cout << Form(" ++   TCB config: SID(%d) TRGON(%d) CW(%d) DLY(%d) PTRIG(%d) \n"
                  "                  MTHR(%d) PSC(%d) DT(%d)",
                  fSID, fTM, fCW, fDLY, fPTRG, fMTHRF, fPSCF, fDTF)
+         << endl
          << endl;
   }
 }
