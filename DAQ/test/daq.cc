@@ -1,6 +1,7 @@
 #include "TROOT.h"
 
 #include "CupDAQManager.hh"
+#include "PSMDTrigger.hh"
 #include "daqopt.hh"
 
 int main(int argc, char ** argv)
@@ -32,15 +33,13 @@ int main(int argc, char ** argv)
   if (option.dosend) DAQ->UseEventMerger();
   if (option.dohist) DAQ->EnableHistograming();
 
-  // To apply a software trigger, subclass AbsSoftTrigger and implement:
-  //   DoConfig(AbsConfList *)  -- read parameters from the config list
-  //   InitTrigger()            -- called once before the run starts
-  //   DoTrigger(BuiltEvent *)  -- return true to accept, false to reject
-  // Then register it here:
-  //   auto * swtrigger = new YourTrigger();
-  //   swtrigger->SetDAQID(option.daqid);
-  //   swtrigger->SetVerboseLevel(option.vlevel);
-  //   DAQ->SetSoftTrigger(swtrigger);
+  // PSMD peak-sum (psum) software trigger for IADC. No-op unless enabled
+  // via YAML "PSMDTrigger: { ENABLED: 1 }" and per-panel thresholds are set
+  // via IADCT "PSUMTHR" (see PSMDTrigger.hh).
+  auto * swtrigger = new PSMDTrigger();
+  swtrigger->SetDAQID(option.daqid);
+  swtrigger->SetVerboseLevel(option.vlevel);
+  DAQ->SetSoftTrigger(swtrigger);
 
   DAQ->Run();
 

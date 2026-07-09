@@ -62,6 +62,12 @@ void IADCTConf::PrintConf() const
     if (step + 10 < fNCH) cout << endl;
   }
 
+  cout << Form("%8s :", "PSUMTHR");
+  for (int i = 0; i < kNPSMDIADC; i++) {
+    cout << Form("%6d", fPSUMTHR[i]);
+  }
+  cout << endl;
+
   cout << " -----------------------------------------------" << endl;
   cout << endl;
 }
