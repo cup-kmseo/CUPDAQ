@@ -21,7 +21,7 @@ public:
   void SetDLY(int ch, int val);
   void SetTLT(int group, int val);
   void SetHV(int group, float val);
-  void SetPSUMTHR(int group, int val);
+  void SetQSUMTHR(int ch, int val);
 
   int NCH() const;
   int MODE() const;
@@ -37,7 +37,7 @@ public:
   int DLY(int ch) const;
   int TLT(int group) const;
   float HV(int group) const;
-  int PSUMTHR(int group) const;
+  int QSUMTHR(int ch) const;
 
   void PrintConf() const override;
 
@@ -57,8 +57,8 @@ protected:
   int fTLT[10]{};
   float fHV[5]{};
 
-  // Per-panel (PSMD, 4 IADC channels each) peak-sum trigger threshold.
-  int fPSUMTHR[kNPSMDIADC]{};
+  // Per-channel Qsum (pedestal-subtracted sample sum) software trigger threshold.
+  int fQSUMTHR[kNCHIADC]{};
 
   ClassDef(IADCTConf, 1)
 };
@@ -76,7 +76,7 @@ inline void IADCTConf::SetTHR(int ch, int val) { fTHR[ch] = val; }
 inline void IADCTConf::SetDLY(int ch, int val) { fDLY[ch] = val; }
 inline void IADCTConf::SetTLT(int group, int val) { fTLT[group] = val; }
 inline void IADCTConf::SetHV(int group, float val) { fHV[group] = val; }
-inline void IADCTConf::SetPSUMTHR(int group, int val) { fPSUMTHR[group] = val; }
+inline void IADCTConf::SetQSUMTHR(int ch, int val) { fQSUMTHR[ch] = val; }
 
 inline int IADCTConf::NCH() const { return fNCH; }
 inline int IADCTConf::MODE() const { return fMODE; }
@@ -102,4 +102,4 @@ inline int IADCTConf::THR(int ch) const { return fTHR[ch]; }
 inline int IADCTConf::DLY(int ch) const { return fDLY[ch]; }
 inline int IADCTConf::TLT(int group) const { return fTLT[group]; }
 inline float IADCTConf::HV(int group) const { return fHV[group]; }
-inline int IADCTConf::PSUMTHR(int group) const { return fPSUMTHR[group]; }
+inline int IADCTConf::QSUMTHR(int ch) const { return fQSUMTHR[ch]; }

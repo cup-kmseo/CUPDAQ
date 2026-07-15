@@ -1,7 +1,6 @@
 #include "TROOT.h"
 
 #include "CupDAQManager.hh"
-#include "PSMDTrigger.hh"
 #include "daqopt.hh"
 
 int main(int argc, char ** argv)
@@ -33,13 +32,11 @@ int main(int argc, char ** argv)
   if (option.dosend) DAQ->UseEventMerger();
   if (option.dohist) DAQ->EnableHistograming();
 
-  // PSMD peak-sum (psum) software trigger for IADC. No-op unless enabled
-  // via YAML "PSMDTrigger: { ENABLED: 1 }" and per-panel thresholds are set
-  // via IADCT "PSUMTHR" (see PSMDTrigger.hh).
-  auto * swtrigger = new PSMDTrigger();
-  swtrigger->SetDAQID(option.daqid);
-  swtrigger->SetVerboseLevel(option.vlevel);
-  DAQ->SetSoftTrigger(swtrigger);
+  // No software trigger here: when UseEventMerger() is on (-x/dosend, the
+  // normal case for a per-DAQID process feeding an IADCMERGER), BuildEvent
+  // short-circuits past any registered SoftTrigger and forwards every event
+  // as-is (see CupDAQManager_build.cc). Register software triggers in
+  // merger.cc instead, where the fully merged event is actually judged.
 
   DAQ->Run();
 

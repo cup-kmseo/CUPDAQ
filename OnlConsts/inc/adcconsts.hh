@@ -98,7 +98,3 @@ const int kNCHMADC = 4;
 //
 const int kNCHIADC = 40;
 const unsigned long kBYTESPEREVENTIADC = 256;
-
-// One PSMD is formed by 4 consecutive IADC channels (PSMD1 -> ch0-3, PSMD2 -> ch4-7, ...).
-const int kNCHPERPSMD = 4;
-const int kNPSMDIADC = kNCHIADC / kNCHPERPSMD;

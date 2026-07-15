@@ -58,15 +58,10 @@ void IADCTConf::PrintConf() const
     print("PID", fPID);
     print("THR", fTHR);
     print("DLY", fDLY);
+    print("QSUMTHR", fQSUMTHR);
 
     if (step + 10 < fNCH) cout << endl;
   }
-
-  cout << Form("%8s :", "PSUMTHR");
-  for (int i = 0; i < kNPSMDIADC; i++) {
-    cout << Form("%6d", fPSUMTHR[i]);
-  }
-  cout << endl;
 
   cout << " -----------------------------------------------" << endl;
   cout << endl;

@@ -394,16 +394,12 @@ void RunConfig::ConfigIADCT(YAML::Node ymlnode)
       FillConfigArray<float>(node["HV"], 5, [&](int group, float v) { conf->SetHV(group, v); });
     }
 
-    if (node["PSUMTHR"]) {
-      FillConfigArray<int>(node["PSUMTHR"], kNPSMDIADC,
-                            [&](int group, int v) { conf->SetPSUMTHR(group, v); });
-    }
-
     if (nch > 0) {
       FillConfigArray<int>(node["CID"], nch, [&](int i, int v) { conf->SetCID(i, v); }, true);
       FillConfigArray<int>(node["PID"], nch, [&](int i, int v) { conf->SetPID(i, v); }, true);
       FillConfigArray<int>(node["THR"], nch, [&](int i, int v) { conf->SetTHR(i, v); });
       FillConfigArray<int>(node["DLY"], nch, [&](int i, int v) { conf->SetDLY(i, v); });
+      FillConfigArray<int>(node["QSUMTHR"], nch, [&](int i, int v) { conf->SetQSUMTHR(i, v); });
     }
 
     fConfigs->Add(conf);

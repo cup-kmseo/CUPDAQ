@@ -1,6 +1,7 @@
 #include "TROOT.h"
 
 #include "CupDAQManager.hh"
+#include "QsumTrigger.hh"
 #include "daqopt.hh"
 
 int main(int argc, char ** argv)
@@ -30,15 +31,17 @@ int main(int argc, char ** argv)
   DAQ->SetVerboseLevel(option.vlevel);
   if (option.dohist) DAQ->EnableHistograming();
 
-  // To apply a software trigger, subclass AbsSoftTrigger and implement:
-  //   DoConfig(AbsConfList *)  -- read parameters from the config list
-  //   InitTrigger()            -- called once before the run starts
-  //   DoTrigger(BuiltEvent *)  -- return true to accept, false to reject
-  // Then register it here:
-  //   auto * swtrigger = new YourTrigger();
-  //   swtrigger->SetDAQID(option.daqid);
-  //   swtrigger->SetVerboseLevel(option.vlevel);
-  //   DAQ->SetSoftTrigger(swtrigger);
+  // Per-channel Qsum software trigger for IADC. No-op unless enabled via
+  // YAML "QsumTrigger: { ENABLED: 1 }" and per-channel thresholds are set
+  // via IADCT "QSUMTHR" (see QsumTrigger.hh). Registered here, not in
+  // daq.cc, because per-DAQID processes forward to the merger with
+  // UseEventMerger() and never call DoTrigger themselves; the merger sees
+  // the fully merged event, which is what Qsum's accept/reject should
+  // actually judge.
+  auto * swtrigger = new QsumTrigger();
+  swtrigger->SetDAQID(option.daqid);
+  swtrigger->SetVerboseLevel(option.vlevel);
+  DAQ->SetSoftTrigger(swtrigger);
 
   DAQ->Run();
 
