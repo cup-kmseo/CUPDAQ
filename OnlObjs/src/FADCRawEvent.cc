@@ -579,16 +579,9 @@ void FADCRawEvent::ApplyZeroSuppression(AbsConf * conf, int nch)
   for (int i = 0; i < nch; i++) {
     if (fHeader->GetZero(i)) continue;
 
-    int ped = static_cast<int>(fHeader->GetPedestal(i));
-    unsigned short * adc = fChannel[i]->GetADC();
-
-    int peak = 0;
-    for (int j = 0; j < fNDP; j++) {
-      int dev = std::abs(static_cast<int>(adc[j]) - ped);
-      if (dev > peak) peak = dev;
-    }
-
-    if (peak < conf->THR(i)) fHeader->SetSuppressed(i);
+    // trust the hardware TLT group decision entirely: keep the channel iff
+    // its 4-channel group was flagged as part of the trigger
+    if (!fHeader->GetTriggerBit(i)) fHeader->SetSuppressed(i);
   }
 }
 
