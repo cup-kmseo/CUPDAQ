@@ -297,7 +297,7 @@ void RunConfig::ConfigFADCT(YAML::Node ymlnode)
     if (node["SID"]) {
       int sid = node["SID"].as<int>();
       conf->SetSID(sid);
-      conf->SetMID(sid);
+      conf->SetMID(node["MID"] ? node["MID"].as<int>() : sid);
     }
     if (node["NCH"]) {
       nch = node["NCH"].as<int>();
