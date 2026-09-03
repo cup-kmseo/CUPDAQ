@@ -576,6 +576,12 @@ void FADCRawEvent::ApplyZeroSuppression(AbsConf * conf, int nch)
 {
   if (!conf->ZSU()) return;
 
+  // random/pedestal forced trigger: hardware never fills ctptn (no TLT
+  // coincidence decision happened), so tbit is 0 for every group and ZSU
+  // would suppress the whole event. Skip suppression entirely so pedestal
+  // runs keep their data (same ttype==1 exception as QsumTrigger).
+  if (fHeader->GetTriggerType() == 1) return;
+
   for (int i = 0; i < nch; i++) {
     if (fHeader->GetZero(i)) continue;
 
